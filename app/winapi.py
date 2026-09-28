@@ -215,12 +215,17 @@ def set_clipboard_text(text: str | None, private: bool = False) -> None:
         win32clipboard.CloseClipboard()
 
 
-def copy_selection(timeout: float = 0.45) -> str:
-    """Aktif uygulamada Ctrl+C simüle eder; pano değişmediyse seçim yok demektir. Pano sonra eski haline döner."""
+def start_copy() -> tuple[str | None, int]:
+    """Aktif uygulamaya Ctrl+C gönderir ve hemen döner; sonucu finish_copy bekler (pencere bu arada açılabilir)."""
     saved = get_clipboard_text()
     before = u32.GetClipboardSequenceNumber()
     wait_modifiers_released()
     chord("c")
+    return saved, before
+
+
+def finish_copy(saved: str | None, before: int, timeout: float = 0.3) -> str:
+    """Pano değiştiyse seçili metni döndürür (değişmediyse seçim yok) ve panoyu eski haline getirir."""
     end = time.time() + timeout
     while time.time() < end:
         if u32.GetClipboardSequenceNumber() != before:
@@ -228,8 +233,13 @@ def copy_selection(timeout: float = 0.45) -> str:
             text = get_clipboard_text() or ""
             set_clipboard_text(saved)
             return text.strip()
-        time.sleep(0.015)
+        time.sleep(0.01)
     return ""
+
+
+def copy_selection(timeout: float = 0.3) -> str:
+    saved, before = start_copy()
+    return finish_copy(saved, before, timeout)
 
 
 def paste_text(text: str, restore_delay: float = 0.5) -> None:
@@ -323,6 +333,14 @@ def hide_from_taskbar(hwnd: int) -> None:
     ex = u32.GetWindowLongW(h, GWL_EXSTYLE)
     u32.SetWindowLongW(h, GWL_EXSTYLE, (ex | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW)
     u32.SetWindowPos(h, None, 0, 0, 0, 0, SWP_NOMOVE | 0x1 | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED)
+
+
+def trim_memory() -> None:
+    """Boştaki sürecin çalışma kümesini Windows'a geri verir (sayfalar gerektiğinde bellekten hızla geri gelir)."""
+    try:
+        ctypes.WinDLL("psapi").EmptyWorkingSet(k32.GetCurrentProcess())
+    except Exception:
+        pass
 
 
 # ---------- DWM görünüm ----------

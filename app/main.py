@@ -22,6 +22,8 @@ from app.bridge import WIDTH, Api  # noqa: E402
 from engine.config import load_config  # noqa: E402
 
 WEB = ROOT / "app" / "web" / "index.html"
+STARTED = time.time()
+TRIM_AFTER = 30.0  # saniye: gizlendikten bu kadar sonra boştaki belleği Windows'a geri ver
 LOG = ROOT / "user_data" / "app.log"
 
 
@@ -78,6 +80,47 @@ class Shell:
             log("deactivate → hide")
             self.window.hide()
             self.visible = False
+            self._schedule_idle()
+
+    # ---------- gizliyken kaynak tasarrufu ----------
+    def _webview_idle(self, idle: bool) -> None:
+        """Gizliyken WebView2'yi düşük bellek moduna alıp askıya alır; gösterirken geri uyandırır."""
+        try:
+            from System import Action
+
+            wv = self.window.native.browser.webview
+
+            def run():
+                core = wv.CoreWebView2
+                if core is None:
+                    return
+                from Microsoft.Web.WebView2.Core import CoreWebView2MemoryUsageTargetLevel as Level
+
+                if idle:
+                    core.MemoryUsageTargetLevel = Level.Low
+                    core.TrySuspendAsync()
+                else:
+                    if core.IsSuspended:
+                        core.Resume()
+                    core.MemoryUsageTargetLevel = Level.Normal
+
+            self.window.native.Invoke(Action(run))
+        except Exception as e:
+            log("webview idle error", e)
+
+    def _schedule_idle(self, delay: float = 30.0) -> None:
+        def later():
+            if not self.visible:
+                self._webview_idle(True)
+
+        def trim():
+            if not self.visible:
+                winapi.trim_memory()
+
+        for d, fn in ((delay, later), (TRIM_AFTER, trim)):
+            t = threading.Timer(d, fn)
+            t.daemon = True
+            t.start()
 
     def js(self, code: str) -> None:
         try:
@@ -99,8 +142,12 @@ class Shell:
         self.visible = False
         if restore_focus and self.prev_hwnd:
             winapi.force_foreground(self.prev_hwnd)
+        # Bir sonraki açılış anında olsun diye arayüzü şimdi, pencere gizliyken ilk ekrana döndür
+        threading.Thread(target=self.js, args=("window.resetForShow && window.resetForShow('')",), daemon=True).start()
+        self._schedule_idle()
 
     def show_at_caret(self) -> None:
+        """Pencereyi imlecin yanında gösterir. JS beklenmez: odak ve açılış animasyonu sonradan tetiklenir."""
         x, y = winapi.anchor_point(self.prev_hwnd)
         scale = winapi.scale_for(x, y)
         px, py = winapi.place_near(x, y, int(WIDTH * scale), int(max(self.height, 420) * scale))
@@ -110,7 +157,6 @@ class Shell:
         self.window.show()
         if self.hwnd:
             winapi.force_foreground(self.hwnd)
-        self.js("window.focus(); document.body.focus();")
 
     # ---------- kısayol ----------
     def on_hotkey(self) -> None:
@@ -118,13 +164,32 @@ class Shell:
             return
         fg = winapi.foreground()
         if self.visible and fg == self.hwnd:
-            self.js("window.resetForShow && window.resetForShow('', null, true)")
             return self.hide(restore_focus=True)
+        t0 = time.perf_counter()
+        if self.api._llm is None:
+            # Gemini motorunu (≈1 sn) kullanıcı seçenekleri seçerken arka planda yükle; boştayken bellekte tutma
+            threading.Thread(target=self._prewarm, daemon=True).start()
         self.prev_hwnd = fg
-        self.captured = winapi.copy_selection() if fg and fg != self.hwnd else ""
-        log("hotkey", "captured", len(self.captured))
-        self.js(f"window.resetForShow && window.resetForShow({json.dumps(self.captured)})")
-        self.show_at_caret()
+        self._webview_idle(False)  # askıdaysa uyandır
+        copying = None
+        if fg and fg != self.hwnd:
+            copying = winapi.start_copy()  # Ctrl+C hedef uygulamaya gitsin...
+            time.sleep(0.04)  # ...tuşlar hedefe ulaşmadan odağı çalmayalım
+        t1 = time.perf_counter()
+        self.captured = ""
+        self.show_at_caret()  # seçim beklenmeden pencere hemen açılır
+        t2 = time.perf_counter()
+        threading.Thread(target=self._after_show, args=(copying, t0, t1, t2), daemon=True).start()
+
+    def _after_show(self, copying, t0: float, t1: float, t2: float) -> None:
+        self.js("window.onShown && window.onShown()")
+        t3 = time.perf_counter()
+        if copying:
+            self.captured = winapi.finish_copy(*copying)
+            if self.captured:
+                self.js(f"window.setCaptured && window.setCaptured({json.dumps(self.captured)})")
+        log(f"hotkey captured={len(self.captured)} copy_send={1000*(t1-t0):.0f}ms visible={1000*(t2-t0):.0f}ms "
+            f"ui_ready={1000*(t3-t0):.0f}ms capture_done={1000*(time.perf_counter()-t0):.0f}ms")
 
     # ---------- tepsi ----------
     def tray(self) -> None:
@@ -141,8 +206,9 @@ class Shell:
             def open_(icon, item):
                 self.prev_hwnd = winapi.foreground()
                 self.captured = ""
-                self.js("window.resetForShow && window.resetForShow('')")
+                self._webview_idle(False)
                 self.show_at_caret()
+                self.js("window.onShown && window.onShown()")
 
             def quit_(icon, item):
                 icon.stop()
@@ -183,10 +249,37 @@ class Shell:
         time.sleep(0.3)
         if self.hotkeys.active_combo:
             self.hotkey_label = self.hotkeys.active_combo
-            log("hotkey registered", self.hotkey_label)
+            log(f"hotkey registered {self.hotkey_label} (açılış {time.time() - STARTED:.1f} sn)")
+        self._schedule_idle(3.0)  # açılıştan sonra motoru hemen askıya al
+
+    def _prewarm(self) -> None:
+        try:
+            t = time.perf_counter()
+            self.api._engine()
+            log(f"motor ön yüklendi ({time.perf_counter() - t:.1f} sn)")
+        except Exception as e:  # anahtar yoksa vb.: ilk kullanımda kullanıcıya gösterilir
+            log("prewarm skipped", e)
+
+
+def _install_crash_logging() -> None:
+    """pythonw'de konsol yok: beklenmeyen hatalar sessizce kaybolmasın, app.log'a yazılsın."""
+    import traceback
+
+    def hook(exc_type, exc, tb):
+        log("CRASH", "".join(traceback.format_exception(exc_type, exc, tb))[-2000:])
+
+    sys.excepthook = hook
+    threading.excepthook = lambda args: hook(args.exc_type, args.exc_value, args.exc_traceback)
 
 
 def main() -> None:
+    _install_crash_logging()
+    # WebView2'nin arka plan ağ trafiği, bileşen güncelleme ve yedek süreç gibi gereksiz işlerini kapat
+    os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", " ".join([
+        "--disable-background-networking", "--disable-component-update", "--disable-sync",
+        "--no-first-run", "--disable-features=SpareRendererForSitePerProcess,msEdgeSidebarV2,msWebOOUI",
+        "--renderer-process-limit=1",
+    ]))
     winapi.set_dpi_aware()
     if not winapi.single_instance():
         print("PromptGenerator zaten çalışıyor.")

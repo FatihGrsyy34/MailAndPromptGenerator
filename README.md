@@ -9,7 +9,8 @@ Windows'ta her yerden **Ctrl+Space** ile açılır: seçenekleri seçip birkaç 
 - Herhangi bir uygulamada **Ctrl+Space**: pencere imlecin yanında açılır. Metin seçiliyse otomatik alınır (seçili bir maile yanıt yazmak için).
 - Akış: `M` Mail / `P` Prompt → seçenekler (`1`-`8` ton/konu, ok tuşları) → `Ctrl+Enter` yaz → `Enter` yapıştır. `Esc` geri/kapat, `E` düzenle, `Shift+1/2/3` daha kısa/resmi/samimi, `Ctrl+R` yeniden.
 - Kısayol başka bir uygulamada kullanılıyorsa sırayla `Ctrl+Shift+Space`, `Ctrl+Alt+Space` denenir; `config.toml` → `[hotkey]` ile değiştirilebilir.
-- Tepsi menüsü: Aç, **Windows açılışında başlat** (işaretle/kaldır), Ayarlar klasörünü aç, Çıkış.
+- **Windows açılışında otomatik başlar** (tepsi menüsünden kapatılabilir: "Windows açılışında başlat"). Tepsi menüsü: Aç, Windows açılışında başlat, Ayarlar klasörünü aç, Çıkış.
+- Kaynak kullanımı (ölçüldü): boşta ~65 MB bellek (Görev Yöneticisi), işlemci ~%0,01; açılış ~2 sn. Pencere gizliyken tarayıcı motoru askıya alınır, 30 sn sonra boştaki bellek Windows'a geri verilir. Kısayola basınca pencere 75–170 ms içinde açılır (motor uzun süre boştaysa ~210 ms).
 - Günlük: `user_data/app.log`. Son seçimler `user_data/ui_state.json` içinde hatırlanır.
 - Gemini ücretsiz kademesinde model başına günlük istek kotası düşüktür (örn. 20); uygulama kotası dolan ya da yoğun olan modeli atlayıp `config.toml`'daki yedek modellere geçer. Yoğun kullanımda ücretli kademe önerilir.
 

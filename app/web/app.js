@@ -648,6 +648,15 @@ window.resetForShow = (captured, mode, hideOnly) => {
   if (mode) chooseMode(mode); else go("mode");
 };
 
+// Pencere göründüğü anda: açılış animasyonu ve klavye odağı (Python beklemeden çağırır)
+window.onShown = () => {
+  win.classList.remove("closing");
+  win.style.animation = "none"; void win.offsetWidth; win.style.animation = "";
+  window.focus(); document.body.focus();
+};
+// Seçili metin pencere açıldıktan sonra gelir
+window.setCaptured = (text) => { applyCapture(text || ""); fitStage(); };
+
 let booted = false;
 window.addEventListener("pywebviewready", () => { if (!booted) { booted = true; boot(window.pywebview.api); } });
 setTimeout(() => { if (!booted && !window.pywebview) { booted = true; boot(null); } }, 250);
