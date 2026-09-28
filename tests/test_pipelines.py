@@ -57,7 +57,9 @@ def test_mail_pipeline_rejects_proofread_rewrite(tmp_path):
         "Humanized": [Humanized(scores=_scores(9), problems=[], subject="Demo", body=CLEAN)],
         "Proofread": [Proofread(subject="Demo", body=rewritten, changes=[])],
     })
-    res = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
+    cfg = _cfg(tmp_path)
+    cfg.mail["always_proofread"] = True  # denetimi zorla: yeniden yazma reddedilmeli
+    res = MailPipeline(llm, cfg, StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
     assert res.body == CLEAN
     assert any(t.get("accepted") is False for t in res.trace)
 
@@ -194,7 +196,7 @@ def test_fix_text_levels(tmp_path):
     llm = FakeLLM({"Draft": [Draft(subject="", body=fixed, placeholders=[], notes="sadeleştirildi")],
                    "Proofread": [Proofread(subject="", body=fixed, changes=[])]})
     r = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).fix_text(src, level="iyilestir", tone="resmi", lang="tr")
-    assert [c["schema"] for c in llm.calls] == ["Draft", "Proofread"]
+    assert [c["schema"] for c in llm.calls] == ["Draft"]  # temiz çıktıda ayrı yazım denetimi çağrısı yok
     assert 'tone to "Formal"' in llm.calls[0]["system"] and "<text>" in llm.calls[0]["user"]
 
 
@@ -204,3 +206,21 @@ def test_fix_text_uses_recipient(tmp_path):
                    "Proofread": [Proofread(subject="", body=fixed, changes=[])]})
     MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).fix_text("rapor hazir", tone="kibar", recipient="ust_yonetici", lang="tr")
     assert "The reader is a Senior manager" in llm.calls[0]["system"]
+
+
+def test_proofread_runs_only_when_checks_find_spelling_errors(tmp_path):
+    sloppy_spelling = "Merhaba Ahmet Bey,\n\nDosya hazır, yarın müsaitmisiniz?\n\nİyi çalışmalar,"
+    fixed = "Merhaba Ahmet Bey,\n\nDosya hazır, yarın müsait misiniz?\n\nİyi çalışmalar,"
+    llm = FakeLLM({
+        "Draft": [Draft(subject="Dosya", body=sloppy_spelling, placeholders=[], notes="")],
+        "Humanized": [Humanized(scores=_scores(9), problems=[], subject="Dosya", body=sloppy_spelling)],
+        "Proofread": [Proofread(subject="Dosya", body=fixed, changes=[])],
+    })
+    res = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
+    assert "müsait misiniz" in res.body and "Proofread" in [c["schema"] for c in llm.calls]
+    llm = FakeLLM({
+        "Draft": [Draft(subject="Dosya", body=fixed, placeholders=[], notes="")],
+        "Humanized": [Humanized(scores=_scores(9), problems=[], subject="Dosya", body=fixed)],
+    })
+    MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
+    assert [c["schema"] for c in llm.calls] == ["Draft", "Humanized"]  # 3 yerine 2 çağrı

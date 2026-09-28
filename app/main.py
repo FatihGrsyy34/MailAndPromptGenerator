@@ -24,7 +24,7 @@ from engine.config import load_config  # noqa: E402
 WEB = ROOT / "app" / "web" / "index.html"
 ICON = ROOT / "app" / "assets" / "app.ico"
 TRAY_ICON = ROOT / "app" / "assets" / "tray.png"
-APP_NAME = "MailPrompt Asistan"
+APP_NAME = "MailPrompt Asistanı"
 APP_ID = "Cognera.MailPromptAsistan"  # görev çubuğu bu kimlikle gruplar, Python ikonu yerine uygulamanınki görünür
 STARTED = time.time()
 TRIM_AFTER = 30.0  # saniye: gizlendikten bu kadar sonra boştaki belleği Windows'a geri ver

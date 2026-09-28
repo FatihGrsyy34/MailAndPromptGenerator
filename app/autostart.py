@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NAME = "MailPrompt Asistan.lnk"
-OLD_NAMES = ("PromptGenerator.lnk",)
+NAME = "MailPrompt Asistanı.lnk"
+OLD_NAMES = ("PromptGenerator.lnk", "MailPrompt Asistan.lnk")
 ICON = ROOT / "app" / "assets" / "app.ico"
 
 
@@ -33,7 +33,7 @@ def enable() -> None:
     link.TargetPath = str(_pythonw())
     link.Arguments = "-m app.main"
     link.WorkingDirectory = str(ROOT)
-    link.Description = "MailPrompt Asistan (Ctrl+Space ile mail ve prompt)"
+    link.Description = "MailPrompt Asistanı (Ctrl+Space ile mail ve prompt)"
     if ICON.exists():
         link.IconLocation = str(ICON)
     link.Save()

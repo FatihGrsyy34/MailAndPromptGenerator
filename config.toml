@@ -30,6 +30,8 @@ default_length = "orta"
 max_humanize_rounds = 2
 # true: taslak kod kontrollerinden temiz geçerse eleştiri turu atlanır (daha hızlı)
 fast_mode = false
+# true: her mailde ayrı bir yazım denetimi çağrısı yapılır (daha yavaş). false: sadece kod kontrolü hata bulursa.
+always_proofread = false
 # Stil profilinden her maile eklenecek benzer gerçek mail sayısı
 style_examples = 4
 

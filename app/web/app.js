@@ -170,7 +170,7 @@ function renderChrome() {
   win.dataset.mode = state.step === "mode" ? "" : state.mode === "fix" ? "mail" : state.mode;
 
   const crumb = $("#crumb");
-  if (state.step === "mode") crumb.innerHTML = "MailPrompt Asistan";
+  if (state.step === "mode") crumb.innerHTML = "MailPrompt Asistanı";
   else if (state.mode === "mail" && isDraft()) crumb.innerHTML = `Mail › Taslağı düzelt › <b>${labelOf("fixlevel", state.sel.fixlevel)}</b> · ${labelOf("tone", state.sel.tone)} · ${labelOf("recipient", state.sel.recipient)}`;
   else if (state.mode === "mail" && state.mailSeg === "tpl") {
     const t = state.templates.find((x) => x.id === state.tpl);
@@ -632,7 +632,7 @@ $("#tplAdapt").addEventListener("click", () => tplRun(true));
 
 // ---------------------------------------------------------------- klavye
 document.addEventListener("keydown", (e) => {
-  const typing = e.target.matches("textarea, [contenteditable='true']");
+  const typing = e.target.matches("input, textarea, select, [contenteditable='true']");  // yazı alanındayken harf/rakam kısayolları çalışmasın
   if (e.key === "Escape") {
     e.preventDefault();
     if ($("#out").contentEditable === "true") return toggleEdit();

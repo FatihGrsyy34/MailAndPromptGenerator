@@ -303,8 +303,8 @@ class MailPipeline:
             notes = d.notes
         else:
             notes = ""
-        issues = self._checks("", body, lang)
-        _, fixed = self.proofread(req, "", body, issues, trace, min_ratio=0.7 if level == "yazim" else 0.85)
+        _, fixed = self._proofread_if_needed(req, "", body, trace, force=level == "yazim",
+                                             min_ratio=0.7 if level == "yazim" else 0.85)
         fixed = _format_cleanup(fixed)
         if lang == "tr":
             fixed = _fix_day_case(fixed)
@@ -313,6 +313,16 @@ class MailPipeline:
             notes = f"{len(changes)} yazım/noktalama düzeltmesi" if changes else "Yazım ve noktalama hatası bulunamadı"
         final = [i for i in self._checks("", fixed, lang) if "madde" not in i.message]
         return MailResult(subject="", body=fixed, notes=notes, warnings=final, trace=trace)
+
+    def _proofread_if_needed(self, req: MailRequest, subject: str, body: str, trace: list, force: bool = False,
+                             min_ratio: float = 0.85) -> tuple[str, str]:
+        """Hız: önceki adım (humanize/iyileştirme/uyarlama) yazımı da düzeltiyor. Ayrı yazım denetimi çağrısı
+        sadece kod kontrolü hâlâ yazım hatası buluyorsa ya da istenmişse yapılır (bir Gemini çağrısı tasarrufu)."""
+        issues = self._checks(subject, body, req.lang)
+        if force or self.config.mail.get("always_proofread", False) or any(i.kind == "spelling" for i in issues):
+            return self.proofread(req, subject, body, issues, trace, min_ratio=min_ratio)
+        trace.append({"step": "proofread", "skipped": "kod kontrolü yazım hatası bulmadı"})
+        return subject, body
 
     # ---- şablon uyarlama ----
     def adapt_template(self, label: str, subject: str, body: str, note: str, lang: str = "tr") -> MailResult:
@@ -331,8 +341,7 @@ class MailPipeline:
         if closing and closing[-1] not in new_body:  # model kapanışı düşürdüyse şablondakini geri koy
             new_body = new_body.rstrip() + "\n\n" + "\n".join(closing)
         req = MailRequest(context=note or body, lang=lang)
-        issues = self._checks(new_subject, new_body, lang)
-        new_subject, new_body = self.proofread(req, new_subject, new_body, issues, trace)
+        new_subject, new_body = self._proofread_if_needed(req, new_subject, new_body, trace)
         new_body = _format_cleanup(new_body)
         if lang == "tr":
             new_body = _fix_day_case(new_body)
@@ -367,7 +376,7 @@ class MailPipeline:
                     break
 
         body = _format_cleanup(body)
-        subject, body = self.proofread(req, subject, body, issues, trace)
+        subject, body = self._proofread_if_needed(req, subject, body, trace)
         body = _tidy_signature(_format_cleanup(body), self._signature())
         if req.lang == "tr":
             body = _fix_day_case(body)
