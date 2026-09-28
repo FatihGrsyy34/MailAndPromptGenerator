@@ -47,6 +47,7 @@ class Shell:
         self.hwnd = 0
         self.visible = False
         self.height = 300
+        self.shown_at = 0.0
         self.ready = threading.Event()
         self.api = Api(self)
         self.window = webview.create_window(
@@ -62,9 +63,21 @@ class Shell:
         try:
             self.hwnd = int(self.window.native.Handle.ToInt64())
             winapi.style_window(self.hwnd, dark=True)
+            winapi.hide_from_taskbar(self.hwnd)
+            # Pencere dışına tıklanınca gizlen (komut paleti davranışı)
+            self.window.native.Deactivate += lambda sender, args: self._on_deactivate()
         except Exception as e:
             log("style error", e)
+        if self.visible is False:
+            self.window.hide()  # bir şey erken gösterdiyse gizli başla
         self.ready.set()
+
+    def _on_deactivate(self) -> None:
+        # Gösterimden hemen sonraki geçici odak değişimlerini yok say
+        if self.visible and time.time() - self.shown_at > 0.4:
+            log("deactivate → hide")
+            self.window.hide()
+            self.visible = False
 
     def js(self, code: str) -> None:
         try:
@@ -77,7 +90,8 @@ class Shell:
         if abs(height - self.height) < 2:
             return
         self.height = height
-        self.window.resize(WIDTH, height)
+        if self.hwnd:
+            winapi.resize_window(self.hwnd, WIDTH, height)  # pywebview resize gizli pencereyi gösteriyor
 
     def hide(self, restore_focus: bool) -> None:
         log("hide", "restore" if restore_focus else "")
@@ -90,9 +104,10 @@ class Shell:
         x, y = winapi.anchor_point(self.prev_hwnd)
         scale = winapi.scale_for(x, y)
         px, py = winapi.place_near(x, y, int(WIDTH * scale), int(max(self.height, 420) * scale))
+        self.shown_at = time.time()
+        self.visible = True
         self.window.move(int(px / scale), int(py / scale))
         self.window.show()
-        self.visible = True
         if self.hwnd:
             winapi.force_foreground(self.hwnd)
         self.js("window.focus(); document.body.focus();")

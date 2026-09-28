@@ -298,6 +298,33 @@ def place_near(x: int, y: int, w: int, h: int) -> tuple[int, int]:
     return px, py
 
 
+# ---------- pencere boyutu / görev çubuğu ----------
+SWP_NOMOVE, SWP_NOZORDER, SWP_NOACTIVATE, SWP_FRAMECHANGED = 0x2, 0x4, 0x10, 0x20
+GWL_EXSTYLE, WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = -20, 0x80, 0x40000
+
+
+def window_scale(hwnd: int) -> float:
+    try:
+        return u32.GetDpiForWindow(wintypes.HWND(hwnd)) / 96.0 or 1.0
+    except Exception:
+        return 1.0
+
+
+def resize_window(hwnd: int, width: int, height: int) -> None:
+    """Pencereyi GÖSTERMEDEN boyutlandırır (pywebview'in resize'ı SWP_SHOWWINDOW kullanıp gizli pencereyi açıyor)."""
+    s = window_scale(hwnd)
+    u32.SetWindowPos(wintypes.HWND(hwnd), None, 0, 0, int(width * s), int(height * s),
+                     SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE)
+
+
+def hide_from_taskbar(hwnd: int) -> None:
+    """Görev çubuğunda ve Alt+Tab'da görünmesin (tepsi ikonu yeterli)."""
+    h = wintypes.HWND(hwnd)
+    ex = u32.GetWindowLongW(h, GWL_EXSTYLE)
+    u32.SetWindowLongW(h, GWL_EXSTYLE, (ex | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW)
+    u32.SetWindowPos(h, None, 0, 0, 0, 0, SWP_NOMOVE | 0x1 | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED)
+
+
 # ---------- DWM görünüm ----------
 def style_window(hwnd: int, dark: bool = True) -> None:
     dwm = ctypes.WinDLL("dwmapi")
