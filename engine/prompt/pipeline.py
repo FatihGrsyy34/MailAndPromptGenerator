@@ -154,7 +154,8 @@ class PromptPipeline:
             detail_label=self.opts["details"][req.detail]["label"],
         )
         # Doğrulama sadakatin bekçisi: güçlü modelle çalışır (kullanıcının önceliği "tam istediğim olsun")
-        return self.llm.generate(tier="quality", system=system, user=f"{blocks}\n\n<prompt>\n{prompt}\n</prompt>", schema=Review)
+        tier = "fast" if req.target == "midjourney" else "quality"  # kısa görsel promptta hızlı model yeterli
+        return self.llm.generate(tier=tier, system=system, user=f"{blocks}\n\n<prompt>\n{prompt}\n</prompt>", schema=Review)
 
     @staticmethod
     def missing_literals(analysis: Analysis, prompt: str, lang: str) -> list[str]:

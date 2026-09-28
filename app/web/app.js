@@ -21,7 +21,7 @@ const DEFAULT_OPTIONS = {
   fixlevel: [["iyilestir", "Profesyonelleştir"], ["yazim", "Sadece yazım / noktalama"]],
   fixtone: [["", "Tonu koru"]],
 };
-const NUMBERED = { mail: "tone", prompt: "task", fix: "fixlevel" };
+const NUMBERED = { mail: "tone", prompt: "task" };
 const GROUPS = { mail: ["tone", "recipient", "length", "lang"], prompt: ["task", "target", "detail", "plang"] };
 // Seçili metin "benim taslağım" ise mailde uzunluk yerine "ne yapılsın" grubu görünür
 const groupsFor = (mode) => (mode === "mail" && isDraft() ? ["fixlevel", "tone", "recipient", "lang"] : GROUPS[mode]);
@@ -144,6 +144,10 @@ function go(step) {
   const back = ORDER[step] < ORDER[state.step];
   state.step = step;
   win.dataset.step = step;
+  if (document.activeElement && document.activeElement.closest(".panel") && !to.contains(document.activeElement)) {
+    document.activeElement.blur();  // gizlenen ekrandaki kutuya tuş gitmesin
+  }
+  $$(".panel").forEach((p) => { p.inert = p !== to; });
   if (from && from !== to) {
     from.classList.remove("active");
     from.classList.add("leaving");
@@ -159,8 +163,9 @@ function go(step) {
   requestAnimationFrame(activate);
   setTimeout(activate, 50); // rAF arka planda bekletilirse diye
   renderChrome();
-  if (step === "mail") setTimeout(() => { $("#mailContext").focus({ preventScroll: true }); stage.scrollTop = 0; }, 60);
-  if (step === "prompt") setTimeout(() => { $("#promptIdea").focus({ preventScroll: true }); stage.scrollTop = 0; }, 60);
+  // odak ancak kullanıcı hâlâ o ekrandaysa verilir (bu arada önizlemeye geçildiyse verilmez)
+  if (step === "mail") setTimeout(() => { if (state.step === "mail" && state.mailSeg === "free") { $("#mailContext").focus({ preventScroll: true }); stage.scrollTop = 0; } }, 60);
+  if (step === "prompt") setTimeout(() => { if (state.step === "prompt") { $("#promptIdea").focus({ preventScroll: true }); stage.scrollTop = 0; } }, 60);
 }
 
 function renderChrome() {
@@ -189,6 +194,7 @@ function renderChrome() {
 }
 function goLabel() {
   if (state.mode === "mail") return isDraft() ? "Düzelt" : "Yaz";
+  if (!$("#questions").hidden) return "Devam";
   return state.captured ? "Geliştir" : "Oluştur";
 }
 // Ana eylem: klavyedeki Enter / Ctrl+Enter ile aynı işi yapar
@@ -204,6 +210,7 @@ document.addEventListener("click", (e) => { if (e.target.closest("[data-mainact]
 function chooseMode(mode) {
   state.mode = mode;
   state.focusGroup = 0;
+  if (mode === "mail") setTimeout(() => setSeg(state.mailSeg), 60);
   if (mode === "mail" && state.captured) { setSeg("free"); setRole(state.capRole); }
   if (mode === "prompt" && state.captured && !$("#promptIdea").value.trim()) $("#promptIdea").value = state.captured;
   go(mode);
@@ -345,9 +352,9 @@ async function generate(extra = {}) {
   }
 }
 
-function shake(el) {
+function shake(el, focusEl) {
   el.animate([{ transform: "translateX(0)" }, { transform: "translateX(-5px)" }, { transform: "translateX(5px)" }, { transform: "translateX(0)" }], { duration: 220, easing: "ease-out" });
-  el.querySelector("textarea")?.focus();
+  (focusEl || el.querySelector("textarea"))?.focus();
 }
 
 function showQuestions(qs) {
@@ -609,7 +616,7 @@ async function tplRun(adapt) {
     const missing = t.fields.filter((f) => f.required && !String(values[f.key] || "").trim());
     if (missing.length) {
       missing.forEach((f) => $(`#tplFields [data-f="${f.key}"]`).closest(".tf").classList.add("err"));
-      shake($("#tplFields"));
+      shake($("#tplFields"), $(`#tplFields [data-f="${missing[0].key}"]`));
       toast("Zorunlu alan: " + missing.map((f) => f.label).join(", "));
       return;
     }
@@ -636,6 +643,8 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     e.preventDefault();
     if ($("#out").contentEditable === "true") return toggleEdit();
+    if (e.target.matches("[contenteditable='true']")) { e.target.contentEditable = "false"; return e.target.blur(); }
+    if (state.busy) return toast("Hazırlanıyor… bitince geri dönebilirsin");
     if (state.step === "preview") return go(state.mode);
     if (state.step !== "mode") return go("mode");
     win.classList.add("closing");
@@ -643,16 +652,17 @@ document.addEventListener("keydown", (e) => {
   }
   if (state.step === "mode") {
     const k = e.key.toLowerCase();
-    if (k === "m") return chooseMode("mail");
-    if (k === "p") return chooseMode("prompt");
+    if (k === "m") { e.preventDefault(); return chooseMode("mail"); }
+    if (k === "p") { e.preventDefault(); return chooseMode("prompt"); }
     const modes = $$(".mode");
     const cur = modes.findIndex((m) => m.classList.contains("kb"));
     if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
       modes.forEach((m) => m.classList.remove("kb"));
-      modes[cur === 0 ? 1 : 0].classList.add("kb");
+      modes[e.key === "ArrowLeft" ? 0 : 1].classList.add("kb");
       return;
     }
-    if (e.key === "Enter") return chooseMode(cur === 1 ? "prompt" : "mail");
+    if (e.key === "Enter") { e.preventDefault(); return chooseMode(cur === 1 ? "prompt" : "mail"); }
     return;
   }
   if (state.step === "mail" || state.step === "prompt" || state.step === "fix") {
@@ -670,7 +680,7 @@ document.addEventListener("keydown", (e) => {
       return;
     }
     if (typing && e.target.tagName === "TEXTAREA" && e.altKey === false) {
-      if ((e.key === "ArrowUp" && e.target.selectionStart === 0) ) { e.preventDefault(); e.target.blur(); setFocusGroup(groupsFor(state.mode).length - 1); }
+      if (e.key === "ArrowUp" && e.target.selectionStart === 0 && e.target.matches("#mailContext, #promptIdea")) { e.preventDefault(); e.target.blur(); setFocusGroup(groupsFor(state.mode).length - 1); }
       return;
     }
     if (typing) return;
@@ -774,7 +784,10 @@ function autoGrow(el) {
   fitStage();
 }
 function growAll() { $$(".field textarea, .tf textarea").forEach(autoGrow); }
-document.addEventListener("input", (e) => { if (e.target.matches(".field textarea, .tf textarea")) autoGrow(e.target); });
+document.addEventListener("input", (e) => {
+  if (e.target.matches(".field textarea, .tf textarea")) autoGrow(e.target);
+  if (e.target.id === "mailContext") e.target.dataset.auto = "";  // artık kullanıcının metni
+});
 
 let booted = false;
 window.addEventListener("pywebviewready", () => { if (!booted) { booted = true; boot(window.pywebview.api); } });

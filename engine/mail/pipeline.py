@@ -54,6 +54,53 @@ def _format_cleanup(text: str) -> str:
     return text
 
 
+_TR_FOLD = str.maketrans("şŞıİğĞüÜöÖçÇâÂîÎûÛ", "ssiiggu" "uoocc" "aaiiuu")
+
+
+def _skeleton(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.translate(_TR_FOLD).lower())
+
+
+_CLOSING_HINT = re.compile(r"(saygı|iyi çalışmalar|teşekkür|sevgiler|görüşmek|kolay gelsin|iyi akşamlar|regards|best|thanks|cheers|sincerely)", re.I)
+
+
+def _closing_block(body: str) -> list[str]:
+    """Metnin sonundaki kapanış satırları ("Teşekkürler, iyi çalışmalar dilerim." + "Saygılarımla,")."""
+    lines = [ln.strip() for ln in body.rstrip().splitlines()]
+    block: list[str] = []
+    for ln in reversed(lines):
+        if not ln:
+            if block:
+                break
+            continue
+        if len(ln.split()) <= 7 and _CLOSING_HINT.search(ln):
+            block.insert(0, ln)
+        else:
+            break
+    return block
+
+
+def _keep_standard_closing(before: str, after: str) -> str:
+    """Düzenleme adımı kullanıcının standart kapanışını silerse ya da değiştirirse eskisini geri koyar."""
+    old, new = _closing_block(before), _closing_block(after)
+    if not old or _skeleton(" ".join(new)) == _skeleton(" ".join(old)):
+        return after  # aynı kapanış (sadece noktalaması düzeltilmiş olabilir)
+    lines = after.rstrip().splitlines()
+    while lines and (not lines[-1].strip() or lines[-1].strip() in new):
+        lines.pop()
+    return "\n".join(lines).rstrip() + "\n\n" + "\n".join(old)
+
+
+def _strip_name_signature(body: str, user: dict) -> str:
+    """İmza Outlook'tan geliyorsa (sign_with_name=false) modelin eklediği ad/unvan/şirket satırlarını siler."""
+    names = {v.strip().lower() for v in (user.get("name"), user.get("title"), user.get("company"),
+                                         user.get("name", "").split(" ")[0]) if v and v.strip()}
+    lines = body.rstrip().splitlines()
+    while lines and (not lines[-1].strip() or lines[-1].strip().rstrip(",.").lower() in names):
+        lines.pop()
+    return "\n".join(lines)
+
+
 def _closing_line(body: str, signature: str) -> str:
     lines = [ln.strip() for ln in body.rstrip().splitlines() if ln.strip()]
     if len(lines) >= 2 and lines[-1] == signature and lines[-2].endswith(","):
@@ -263,10 +310,12 @@ class MailPipeline:
         # Yazım denetimi sadece hata düzeltmeli; metni yeniden yazdıysa reddet
         ratio = difflib.SequenceMatcher(None, body, result.body).ratio()
         # Kelime düzeyinde de bak: çok hatalı kısa metinde karakter oranı düşer ama kelime sırası aynı kalır
-        words_ratio = difflib.SequenceMatcher(None, body.split(), result.body.split()).ratio()
-        same_len = 0.9 <= word_count(result.body) / max(1, word_count(body)) <= 1.15
-        accepted = same_len and (ratio >= min_ratio or (ratio >= 0.7 and words_ratio >= 0.5))
-        self._step(trace, "proofread", t, similarity=round(ratio, 3), accepted=accepted,
+        # İskelet: harf büyüklüğü, noktalama, boşluk, kesme ve Türkçe karakter farkları yok sayılır. Yazım düzeltmesi
+        # iskeleti neredeyse hiç değiştirmez ("varmı" → "var mı", "10:00 da" → "10.00'da"); yeniden yazım değiştirir.
+        skeleton_ratio = difflib.SequenceMatcher(None, _skeleton(body), _skeleton(result.body)).ratio()
+        same_len = 0.8 <= word_count(result.body) / max(1, word_count(body)) <= 1.25
+        accepted = same_len and (ratio >= min_ratio or skeleton_ratio >= 0.9)
+        self._step(trace, "proofread", t, similarity=round(ratio, 3), skeleton=round(skeleton_ratio, 3), accepted=accepted,
                    changes=[f"{c.from_text} → {c.to_text}" for c in result.changes])
         if not accepted:
             return subject, body
@@ -308,8 +357,11 @@ class MailPipeline:
         fixed = _format_cleanup(fixed)
         if lang == "tr":
             fixed = _fix_day_case(fixed)
+        if (self.config.user.get("name") or "~") not in text:
+            fixed = _strip_name_signature(fixed, self.config.user)
+        fixed = _keep_standard_closing(text, fixed)
         if level == "yazim":
-            changes = [c for s in trace if s.get("step") == "proofread" for c in s.get("changes", [])]
+            changes = [c for s in trace if s.get("step") == "proofread" and s.get("accepted") for c in s.get("changes", [])]
             notes = f"{len(changes)} yazım/noktalama düzeltmesi" if changes else "Yazım ve noktalama hatası bulunamadı"
         final = [i for i in self._checks("", fixed, lang) if "madde" not in i.message]
         return MailResult(subject="", body=fixed, notes=notes, warnings=final, trace=trace)
@@ -363,7 +415,7 @@ class MailPipeline:
         max_rounds = int(self.config.mail.get("max_humanize_rounds", 2))
         fast = bool(self.config.mail.get("fast_mode", False))
         hard = [i for i in issues if i.hard and i.kind != "spelling"]
-        if not (fast and not hard):
+        if not (fast and not hard) and not req.revision:
             for round_no in range(max_rounds):
                 h = self.humanize(req, subject, body, issues, trace)
                 if scores is None:
@@ -378,6 +430,9 @@ class MailPipeline:
         body = _format_cleanup(body)
         subject, body = self._proofread_if_needed(req, subject, body, trace)
         body = _tidy_signature(_format_cleanup(body), self._signature())
+        if not self._signature():
+            body = _strip_name_signature(body, self.config.user)
+        body = _keep_standard_closing(d.body, body)
         if req.lang == "tr":
             body = _fix_day_case(body)
         final = self._checks(subject, body, req.lang) + self._length_issue(body, req)

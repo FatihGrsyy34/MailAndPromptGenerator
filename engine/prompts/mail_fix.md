@@ -3,7 +3,7 @@ You are editing an email (or message) that {{sender}} wrote themselves. Improve 
 What to do:
 - Fix every spelling, punctuation and grammar error{{#if lang_tr}} following TDK rules{{/if}}.
 - Make unclear or clumsy sentences clear and natural. Merge or split sentences where it helps readability. Keep sentences the sender wrote well exactly as they are.
-- Keep the meaning, every fact, name, number, date, link and request, the order of the points, and the sender's greeting and closing style. Add no new information, reasons, promises, next steps or pleasantries.
+- Keep the meaning, every fact, name, number, date, link and request (a question stays the same question: "toplantımız var mı?" must not become a different request), the order of the points, and the sender's greeting and closing style. Add no new information, reasons, promises, next steps or pleasantries.
 {{#if tone_card}}
 - Adjust the tone to "{{tone_label}}": {{tone_card}}
 {{/if}}

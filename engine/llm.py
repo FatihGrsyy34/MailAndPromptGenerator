@@ -24,7 +24,7 @@ class LLMLike(Protocol):
 class GeminiLLM:
     RETRY_CODES = {429, 500, 502, 503, 504}
 
-    def __init__(self, config: Config, api_key: str | None = None, rounds: int = 3, timeout_s: int = 60):
+    def __init__(self, config: Config, api_key: str | None = None, rounds: int = 3, timeout_s: int = 30):
         from google import genai
         from google.genai import types
 
@@ -88,6 +88,9 @@ class GeminiLLM:
                 return "retry", e
             if code == 404:
                 self._cooldown[model] = time.time() + 86400
+                return "retry", e
+            if code in (500, 502, 503, 504):
+                self._cooldown[model] = time.time() + 30  # yoğun model: kısa süre dinlendir, sıradakine geç
                 return "retry", e
             if code in self.RETRY_CODES:
                 return "retry", e

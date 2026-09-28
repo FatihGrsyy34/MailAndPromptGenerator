@@ -6,8 +6,8 @@ from engine.mail.pipeline import Draft, Humanized, MailPipeline, MailRequest, Pr
 from engine.mail.style_profile import StyleStore
 from engine.prompt.pipeline import Analysis, Generated, PromptPipeline, PromptRequest, Review, Unknown
 
-CLEAN = "Merhaba Ahmet Bey,\n\nPerşembe günkü demoyu 16.00'ya almamız gerekiyor. Test ortamı sabah hazır olmayacak.\n\nSaat uyarsa daveti güncelliyorum.\n\nİyi çalışmalar,\nFatih Gürsoy"
-SLOPPY = "Merhaba Ahmet Bey,\n\nUmarım bu e-posta sizi iyi bulur. Demoyu erteliyoruz — test ortamı hazır değil.\n\nBaşka sorunuz olursa çekinmeyin.\n\nİyi çalışmalar,\nFatih Gürsoy"
+CLEAN = "Merhaba Ahmet Bey,\n\nPerşembe günkü demoyu 16.00'ya almamız gerekiyor. Test ortamı sabah hazır olmayacak.\n\nSaat uyarsa daveti güncelliyorum.\n\nİyi çalışmalar,"
+SLOPPY = "Merhaba Ahmet Bey,\n\nUmarım bu e-posta sizi iyi bulur. Demoyu erteliyoruz — test ortamı hazır değil.\n\nBaşka sorunuz olursa çekinmeyin.\n\nİyi çalışmalar,"
 
 
 class FakeLLM:
@@ -224,3 +224,14 @@ def test_proofread_runs_only_when_checks_find_spelling_errors(tmp_path):
     })
     MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
     assert [c["schema"] for c in llm.calls] == ["Draft", "Humanized"]  # 3 yerine 2 çağrı
+
+
+def test_name_signature_removed_and_standard_closing_kept(tmp_path):
+    draft = "Merhaba Ahmet Bey,\n\nDosyayı ekte iletiyorum.\n\nTeşekkürler, iyi çalışmalar dilerim.\nSaygılarımla,"
+    humanized = "Merhaba Ahmet Bey,\n\nDosyayı ekte iletiyorum.\n\nGörüşmek üzere,\nFatih Gürsoy\nCognera"
+    llm = FakeLLM({
+        "Draft": [Draft(subject="Dosya", body=draft, placeholders=[], notes="")],
+        "Humanized": [Humanized(scores=_scores(8), problems=[], subject="Dosya", body=humanized)],
+    })
+    res = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
+    assert res.body.endswith("Teşekkürler, iyi çalışmalar dilerim.\nSaygılarımla,") and "Fatih" not in res.body

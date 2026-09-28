@@ -144,8 +144,7 @@ def check_subject(subject: str, lang: str) -> list[Issue]:
 
 def check_mail(subject: str, body: str, lang: str) -> list[Issue]:
     return (
-        check_subject(subject, lang)
-        + check_banned(f"{subject}\n{body}", lang)
+        check_banned(f"{subject}\n{body}", lang)
         + check_format(body)
         + check_rhythm(body, lang)
         + check_etiquette(body, lang)
