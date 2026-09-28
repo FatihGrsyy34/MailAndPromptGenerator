@@ -1,0 +1,82 @@
+# English phrases that make an email read as machine-written.
+# Format:  phrase => suggestion
+#   - Case-insensitive; the phrase may be followed by more letters ("delve" also catches "delving").
+#   - Lines starting with "re:" are regular expressions.
+#   - Lines starting with "~" are soft: alone they only warn; 2+ together trigger a fix.
+
+# --- Stock openers ---
+i hope this email finds you well => open with the actual reason for writing
+i hope this message finds you well => open with the actual reason for writing
+i hope this finds you well => open with the actual reason for writing
+i trust this finds you well => open with the actual reason for writing
+i hope you're doing well => skip it unless the relationship is genuinely warm
+i hope you are doing well => skip it unless the relationship is genuinely warm
+i wanted to reach out => state the request directly
+i am reaching out => state the request directly
+i'm reaching out => state the request directly
+just wanted to touch base => state the request directly
+touch base => "check in" or state the request
+i am writing to inform you => state the news directly
+i'm writing to let you know => state the news directly
+
+# --- Chatbot leftovers / stock closers ---
+please don't hesitate => "Let me know if anything's unclear." or nothing
+please do not hesitate => "Let me know if anything's unclear." or nothing
+don't hesitate to reach out => cut it
+feel free to reach out => cut it
+i hope this helps => cut it
+hope this helps => cut it
+great question => cut it
+thank you for your patience and understanding => "Thanks for bearing with us."
+looking forward to hearing from you soon => "Looking forward to hearing from you." at most
+i look forward to your prompt response => "Could you reply by [date]?"
+certainly! => cut it
+absolutely! => cut it
+
+# --- Filler ---
+it's worth noting => just say it
+it is worth noting => just say it
+it's important to note => just say it
+it is important to note => just say it
+at the end of the day => cut it
+when it comes to => "for" / "on"
+in today's fast-paced => cut it
+in today's => cut it unless literal
+here's the thing => cut it
+moving forward => "from now on" / "next"
+going forward => "from now on" / "next"
+circle back => "follow up" / "get back to"
+deep dive => "review" / "look closely at"
+game-changer => say what changes
+game changer => say what changes
+re:\bnot (just|only|merely) [^.]{1,60}, but (also )?\b => make one direct claim
+re:\bserves as (a|an|the)\b => "is"
+re:\b(truly|genuinely|incredibly) (appreciate|grateful|excited|sorry)\b => drop the intensifier
+
+# --- Vocabulary tells ---
+delve => "look into" / "go through"
+tapestry => cut it
+testament to => say what it shows
+seamless => "smooth" or be specific
+seamlessly => cut it or be specific
+pivotal => "key" or be specific
+realm => "area"
+landscape => name the actual thing
+synergy => cut it
+synergies => cut it
+~leverage
+~foster
+~robust
+~streamline
+~crucial
+~underscore
+~showcase
+~navigate
+~enhance
+~empower
+~holistic
+~cutting-edge
+~elevate
+~meticulous
+~invaluable
+~comprehensive

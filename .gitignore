@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+user_data/
+evals/results/
+dist/
+build/
+*.spec
+
+# kişisel/yerel
+.claude/settings.local.json
+*.log

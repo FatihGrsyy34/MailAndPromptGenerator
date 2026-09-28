@@ -1,0 +1,157 @@
+# Ton kartları. Her ton tek bir sıfat değil, davranış tarifidir; model "resmi" kelimesini kendi
+# kafasına göre yorumlamasın diye. Yeni ton eklemek için aynı alanlarla bir blok ekleyin.
+# card: modele giden talimat (İngilizce yazıldı çünkü her iki dilde de kullanılıyor)
+# closings_tr / closings_en: bu tonda izin verilen kapanışlar (alıcı seviyesine göre model seçer)
+
+tones:
+  resmi:
+    label: Resmi
+    label_en: Formal
+    card: |
+      Formal and correct, the way you write to a senior executive, a public institution or a client you have never met.
+      Full sentences, no contractions in English, no colloquialisms. Polite but not flowery: respect comes from precision,
+      not from piling up courtesy phrases. State the matter and the request plainly in the opening paragraph.
+      In Turkish use "siz" throughout, prefer "rica ederim / arz ederim" over casual verbs, but do not stack
+      "-mektedir" endings; write clean, modern formal Turkish.
+    greeting_tr: ["Sayın Ad Soyad,", "Değerli Ad Bey/Hanım,", "Sayın Yetkili,"]
+    greeting_en: ["Dear Mr./Ms. Surname,", "Dear First name,"]
+    closings_tr: ["Saygılarımla,", "Bilgilerinize sunarım. Saygılarımla,"]
+    closings_en: ["Kind regards,", "Best regards,"]
+
+  normal:
+    label: Normal
+    label_en: Neutral
+    card: |
+      Everyday professional office tone, like a competent colleague writing to someone they work with regularly.
+      Friendly enough, but the email is about the work. Short paragraphs, clear request, no small talk unless the
+      context gives a real reason for it.
+    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,", "Merhaba,"]
+    greeting_en: ["Hi First name,", "Hello First name,"]
+    closings_tr: ["İyi çalışmalar,", "Teşekkürler, iyi çalışmalar,", "Teşekkürler,"]
+    closings_en: ["Best,", "Thanks,", "Best regards,"]
+
+  kibar:
+    label: Kibar
+    label_en: Polite
+    card: |
+      Courteous and considerate: you are asking for something or giving news the reader may not love. Soften requests
+      with "rica etsem / mümkünse / could you", acknowledge the reader's time once, and thank them once. Never grovel,
+      never apologise more than once, never add compliments that are not grounded in the context.
+    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Sayın Ad Soyad,"]
+    greeting_en: ["Dear First name,", "Hi First name,"]
+    closings_tr: ["Şimdiden teşekkür ederim, iyi çalışmalar,", "Teşekkür ederim, saygılarımla,", "İyi çalışmalar dilerim,"]
+    closings_en: ["Thank you in advance,", "Many thanks,", "Kind regards,"]
+
+  samimi:
+    label: Samimi
+    label_en: Friendly
+    card: |
+      Relaxed and friendly, for a teammate or a colleague you get on well with. Conversational sentences, contractions
+      in English, a light touch of warmth ("Kolay gelsin", "Hope your week's going well" only if it fits). Still clean
+      spelling and punctuation, still gets to the point quickly. In Turkish, keep "siz" unless the context clearly
+      shows you use "sen" with this person.
+    greeting_tr: ["Merhaba Ad,", "Selam Ad,", "Ad merhaba, kolay gelsin."]
+    greeting_en: ["Hi First name,", "Hey First name,"]
+    closings_tr: ["Teşekkürler,", "Görüşmek üzere,", "Sevgiler,", "Kolay gelsin,"]
+    closings_en: ["Thanks!", "Cheers,", "Talk soon,"]
+
+  insancil:
+    label: İnsancıl / Sıcak
+    label_en: Warm / Human
+    card: |
+      Warm and genuinely human: the reader should feel a person thought about them before writing. One sentence that
+      shows real empathy or appreciation tied to something specific in the context (not a generic "hope you're well").
+      Plain, sincere words; no dramatic adjectives, no motivational-poster language. Then the practical content.
+    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,"]
+    greeting_en: ["Hi First name,", "Dear First name,"]
+    closings_tr: ["Sağlıcakla kalın,", "Teşekkürler, iyi çalışmalar,", "Sevgiler,"]
+    closings_en: ["Warmly,", "All the best,", "Take care,"]
+
+  net:
+    label: Net / Kararlı
+    label_en: Direct / Assertive
+    card: |
+      Direct and firm, for follow-ups, escalations, deadlines or pushing back. The request or decision goes in the first
+      sentence. Give a concrete date or next step. No apologies, no hedging words (just, maybe, perhaps, belki, acaba),
+      no softening chains. Stay polite and factual; firmness comes from clarity, not from harsh words.
+    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,"]
+    greeting_en: ["Hi First name,", "Dear First name,"]
+    closings_tr: ["İyi çalışmalar,", "Saygılarımla,"]
+    closings_en: ["Best regards,", "Regards,"]
+
+  ozur:
+    label: Özür / Telafi
+    label_en: Apology
+    card: |
+      A sincere apology for a mistake, delay or problem. Apologise once, early, and name the specific issue. Take
+      responsibility without over-explaining or blaming others. Then say concretely what has been done or will be done
+      and by when. No repeated "sorry", no "any inconvenience this may have caused" boilerplate.
+    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Sayın Ad Soyad,"]
+    greeting_en: ["Dear First name,", "Hi First name,"]
+    closings_tr: ["Anlayışınız için teşekkür ederim, saygılarımla,", "İyi çalışmalar,"]
+    closings_en: ["Thanks for your understanding,", "Kind regards,"]
+
+  tesekkur:
+    label: Teşekkür
+    label_en: Thank-you
+    card: |
+      A thank-you note. Thank the person for one specific thing and say what difference it made, using details from
+      the context. Keep it short. No generic praise ("amazing job", "harika iş") without the specific reason behind it.
+    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,"]
+    greeting_en: ["Hi First name,", "Dear First name,"]
+    closings_tr: ["Tekrar teşekkürler, iyi çalışmalar,", "Sevgiler,", "Saygılarımla,"]
+    closings_en: ["Thanks again,", "With thanks,", "Best,"]
+
+recipients:
+  ust_yonetici:
+    label: Üst yönetici
+    label_en: Senior manager
+    card: |
+      Someone senior in your own company. Respectful, efficient, no filler: lead with the conclusion or the decision
+      you need, then the minimum background. Turkish: "siz", "Ad Bey/Hanım"; "Saygılarımla" fits as a closing.
+  meslektas:
+    label: Meslektaş
+    label_en: Colleague
+    card: |
+      A peer in your company or a partner company. Collegial and to the point. Turkish: "Merhaba Ad Bey/Hanım" or
+      first name if the context suggests it; "İyi çalışmalar" is the natural closing.
+  musteri:
+    label: Müşteri
+    label_en: Client
+    card: |
+      A client or customer. Professional, reassuring, clear about next steps and dates. Never promise anything that is
+      not in the context. Turkish: "siz", "Ad Bey/Hanım" or "Sayın Ad Soyad" for first contact.
+  ekip:
+    label: Ekip
+    label_en: Team
+    card: |
+      Your own team or several people at once. Clear, practical, friendly. For groups in Turkish "Merhaba arkadaşlar,"
+      or "Herkese merhaba," works; in English "Hi all," / "Hi team,". Make actions and owners obvious.
+  tedarikci:
+    label: Tedarikçi / İş ortağı
+    label_en: Vendor / Partner
+    card: |
+      A vendor or external partner. Courteous and businesslike, precise about what you need, quantities, dates and
+      references. Turkish: "siz", "Ad Bey/Hanım".
+  genel:
+    label: Genel
+    label_en: General
+    card: |
+      Recipient relationship unknown. Default to polite professional: "siz", neutral greeting, neutral closing.
+
+lengths:
+  kisa:
+    label: Kısa
+    card: "Short: about 40-90 words in the body (excluding greeting and sign-off). One or two short paragraphs."
+    min_words: 25
+    max_words: 110
+  orta:
+    label: Orta
+    card: "Medium: about 90-170 words in the body (excluding greeting and sign-off). Two or three paragraphs."
+    min_words: 70
+    max_words: 200
+  uzun:
+    label: Uzun
+    card: "Long: about 170-300 words in the body (excluding greeting and sign-off). Use paragraphs; a short list is fine only for 3+ parallel action items."
+    min_words: 140
+    max_words: 340

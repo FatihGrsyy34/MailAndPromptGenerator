@@ -1,0 +1,189 @@
+# Sabit mail şablonları. Metinler Fatih'in gerçek gönderilmiş maillerinden alındı (source: gercek);
+# örneği henüz olmayanlar onun üslubuyla yazılmış taslaklardır (source: taslak) ve gerçek örnekle güncellenmelidir.
+#
+# Alan tipleri: text (tek satır), textarea (çok satır), list (her satır bir madde olur), bool (evet/hayır)
+# Metinde {{alan}} değeri, {{#if alan}}...{{/if}} alan doluysa, {{#if no_alan}}...{{/if}} alan boşsa görünür.
+# {{selam}} alıcıya göre otomatik oluşur: "Merhaba Ayşe Hanım," ya da "Merhaba,"; {{kapanis}} standart kapanıştır.
+
+common_fields:
+  - {key: alici, label: "Alıcı", type: text, placeholder: "Ayşe Hanım (boşsa: Merhaba,)"}
+
+templates:
+  pdd_gonderim:
+    label: "PDD gönderimi"
+    source: gercek
+    fields:
+      - {key: surec, label: "Süreç adı", type: text, required: true, placeholder: "Fatura Onay Süreci"}
+      - {key: sirket, label: "Şirket (konu satırı için)", type: text, placeholder: "Örnek Şirket"}
+      - {key: poc, label: "PoC / Demo çalışması", type: bool}
+      - {key: aciklama, label: "PDD'nin ne olduğunu açıkla (yeni müşteri)", type: bool}
+      - {key: bekleyenler, label: "Ayrıca hatırlatılacak bekleyen konular", type: list, placeholder: "Maaş Ödemeleri: sürecin İK ile netleştirilmesi"}
+    subject: "{{#if sirket}}{{sirket}} {{/if}}{{surec}}{{#if poc}} PoC{{/if}} - Süreç Tasarım Dokümanı (PDD)"
+    body: |
+      {{selam}}
+
+      {{#if poc}}Gerçekleştirdiğimiz analiz toplantımızın ardından, {{surec}} PoC Demo çalışmamız için hazırladığımız PDD tamamlanmıştır.{{/if}}{{#if no_poc}}Gerçekleştirdiğimiz {{surec}} sürecinin analiz toplantısının ardından, toplantı çıktıları doğrultusunda üzerinde çalıştığımız Süreç Tasarım Dokümanı (PDD) tamamlanmıştır.{{/if}} İncelemeniz ve imzalayıp tarafımıza iletilmesi için dokümanı ekte paylaşıyorum.
+      {{#if aciklama}}
+
+      Geliştirme aşamasına geçmeden önce hazırladığımız bu doküman, bizim için bir yol haritası ve rehber niteliği taşıyor. Robotun süreci devraldığında adım adım yapacağı işlemleri, uyacağı kuralları ve kullanacağı ekranları anlatan detaylı bir senaryo olarak düşünebilirsiniz. Amacımız, geliştirmeye başlamadan önce robotun süreci tam da sizin yaptığınız gibi, eksiksiz ve doğru anladığından emin olmaktır.
+      {{/if}}
+
+      Doküman üzerinde yapacağınız değerlendirmeler ve geri bildirimler doğrultusunda gerekli güncellemeleri yapıp sürecin bir sonraki adımı olan geliştirme aşamasına geçeceğiz. Herhangi bir sorunuz olması veya birlikte gözden geçirmek istediğiniz bir bölüm bulunması durumunda kısa bir görüşme planlamaktan memnuniyet duyarız.
+      {{#if bekleyenler}}
+
+      Ek olarak, geliştirmelere hız kesmeden devam edebilmemiz adına aşağıdaki konulardaki geri dönüşlerinizi küçük bir hatırlatma olarak dikkatinize sunmak isterim:
+
+      {{bekleyenler}}
+      {{/if}}
+
+      {{kapanis}}
+
+  pdd_hatirlatma:
+    label: "PDD hatırlatma"
+    source: gercek
+    fields:
+      - {key: surec, label: "Süreç adı", type: text, required: true}
+    subject: "{{surec}} - Süreç Tasarım Dokümanı (PDD) Onayı Hakkında"
+    body: |
+      {{selam}}
+
+      Geçtiğimiz günlerde ilettiğim {{surec}} Süreç Tasarım Dokümanı (PDD) ile ilgili sürecimizi kısaca hatırlatmak istedim.
+
+      Planlanan takvimde ilerleyebilmemiz ve bir sonraki adım olan geliştirme aşamasına başlayabilmemiz için doküman üzerindeki değerlendirmelerinize veya onayınıza ihtiyaç duyuyoruz. Müsaitliğiniz doğrultusunda dokümanı inceleyip tarafımıza iletebilirseniz çok seviniriz.
+
+      {{kapanis}}
+
+  pdd_revizyon:
+    label: "PDD revizyonu"
+    source: gercek
+    fields:
+      - {key: surec, label: "Süreç adı", type: text, required: true}
+      - {key: degisiklikler, label: "Yapılan değişiklikler", type: textarea, required: true, placeholder: "\"Onay Durumu\" kolonu boş olan kayıtlar raporda ayrıca listelenecek şekilde"}
+      - {key: ek, label: "Ek olarak iletilen dosya (varsa)", type: text, placeholder: "hatırlatma maillerinde yer alacak Excel dosyasının bir örneğini"}
+    subject: "{{surec}} - Süreç Tasarım Dokümanı (PDD) Güncellemesi"
+    body: |
+      {{selam}}
+
+      PDD üzerinde konuştuğumuz güncellemeleri gerçekleştirdim. {{degisiklikler}}
+
+      Güncel dokümanı ekte iletiyorum.{{#if ek}} Ek olarak, {{ek}} de ekte paylaşıyorum.{{/if}}
+
+      {{kapanis}}
+
+  analiz_sonrasi_paylasim:
+    label: "Analiz sonrası paylaşım"
+    source: gercek
+    fields:
+      - {key: paylasilan, label: "Paylaşılan", type: text, required: true, placeholder: "veri tabanından çektiğimiz raporu Excel formatında"}
+      - {key: not_, label: "Ek not", type: textarea}
+    subject: "Analiz toplantısı sonrası paylaşım"
+    body: |
+      {{selam}}
+
+      Toplantımızda görüştüğümüz üzere, {{paylasilan}} ekte paylaşıyorum.{{#if not_}}
+
+      {{not_}}{{/if}}
+
+      {{kapanis}}
+
+  demo_kaydi:
+    label: "Demo kaydı paylaşımı"
+    source: gercek
+    fields:
+      - {key: zaman, label: "Toplantı ne zamandı", type: text, placeholder: "Dün"}
+      - {key: link, label: "Kayıt linki", type: text, required: true}
+    subject: "Robot demo kaydı"
+    body: |
+      {{selam}}
+
+      {{#if zaman}}{{zaman}} {{/if}}toplantımızda robotun demo çalışmasının kaydını istemiştiniz. Tekrardan çalıştırıp kayıt aldım.
+      Buradan izleyebilirsiniz: {{link}}
+
+      {{kapanis}}
+
+  canliya_gecis_bilgi:
+    label: "Canlıya geçiş bilgi talebi"
+    source: gercek
+    fields:
+      - {key: sistem, label: "Sistem", type: text, required: true, placeholder: "SAP"}
+      - {key: istenen, label: "İstenen bilgi", type: text, required: true, placeholder: "güncel SAP login bilgilerine"}
+    subject: "{{sistem}} - Canlı Ortam Bilgileri"
+    body: |
+      {{selam}}
+
+      RPA sürecimizin {{sistem}} test ortamındaki testlerini tamamladık. Sürecimizin canlıya geçiş aşaması için hazırlıklarımızı yapıyoruz.
+      Bu adımı tamamlayabilmemiz adına {{istenen}} ihtiyacımız var. Müsait olduğunuzda bilgileri iletebilirseniz çok sevinirim.
+
+      {{kapanis}}
+
+  canli_sonrasi:
+    label: "Canlı sonrası bilgilendirme"
+    source: gercek
+    fields:
+      - {key: surec, label: "Süreç adı", type: text, required: true}
+      - {key: calisma, label: "Robotun çalışma zamanı", type: text, placeholder: "her gün saat 15.00'te"}
+    subject: "{{surec}} - Canlıya Geçiş"
+    body: |
+      {{selam}}
+
+      {{surec}} sürecimizi canlıya aldık.{{#if calisma}} Robot bundan sonra {{calisma}} çalışacak.{{/if}} Canlıda bundan sonra her çalışmanın sonunda süreç sonu raporu sizin mailinize de gelecek. Sizden başka raporu atmamız gereken mail adresleri var mı acaba?
+
+      {{kapanis}}
+
+  uat_daveti:
+    label: "UAT toplantısı daveti"
+    source: taslak
+    fields:
+      - {key: surec, label: "Süreç adı", type: text, required: true}
+      - {key: tarih, label: "Toplantı tarihi/saati", type: text, placeholder: "2 Ekim Perşembe, 14.00"}
+      - {key: hazirlik, label: "Toplantıdan önce istenen", type: text, placeholder: "test için kullanacağımız güncel Excel dosyalarını ortak alana"}
+    subject: "{{surec}} - Kullanıcı Kabul Testi (UAT)"
+    body: |
+      {{selam}}
+
+      {{surec}} sürecimizin geliştirmelerini tamamladık ve kullanıcı kabul testi (UAT) aşamasına geçmeye hazırız. UAT toplantısında robotu sizinle birlikte gerçek senaryolar üzerinde çalıştırıp çıktıları beraber kontrol etmeyi planlıyoruz.
+      {{#if tarih}}
+      Toplantıyı {{tarih}} için planladık, davetini ayrıca iletiyorum.{{/if}}{{#if no_tarih}}
+      Sizin için uygun bir zaman belirtirseniz toplantıyı planlayabiliriz.{{/if}}{{#if hazirlik}}
+
+      Toplantı öncesinde {{hazirlik}} yükleyebilirseniz çok sevinirim.{{/if}}
+
+      {{kapanis}}
+
+  analiz_daveti:
+    label: "Analiz toplantısı daveti"
+    source: taslak
+    fields:
+      - {key: surec, label: "Süreç adı", type: text, required: true}
+      - {key: tarih, label: "Toplantı tarihi/saati", type: text}
+    subject: "{{surec}} - Analiz Toplantısı"
+    body: |
+      {{selam}}
+
+      {{surec}} süreci için bir analiz toplantısı planlamak istiyoruz. Toplantıda sürecin mevcut işleyişini adım adım sizden dinleyip kullanılan ekranları, dosyaları ve istisna durumları birlikte not almayı hedefliyoruz.
+      {{#if tarih}}
+      Toplantıyı {{tarih}} için planladık, davetini ayrıca iletiyorum.{{/if}}{{#if no_tarih}}
+      Sizin için uygun bir zaman belirtirseniz toplantıyı planlayabiliriz.{{/if}} Süreci günlük olarak yürüten kişilerin de toplantıya katılması bizim için çok faydalı olacaktır.
+
+      {{kapanis}}
+
+  poc_demo_daveti:
+    label: "PoC demo sunumu"
+    source: taslak
+    fields:
+      - {key: surec, label: "Süreç adı", type: text, required: true}
+      - {key: tarih, label: "Demo tarihi/saati", type: text}
+    subject: "{{surec}} PoC - Demo Sunumu"
+    body: |
+      {{selam}}
+
+      {{surec}} PoC çalışmamızı tamamladık. Robotun süreci nasıl yürüttüğünü sizinle bir demo üzerinden paylaşmak istiyoruz.
+      {{#if tarih}}
+      Demo sunumunu {{tarih}} için planladık, davetini ayrıca iletiyorum.{{/if}}{{#if no_tarih}}
+      Sizin için uygun bir zaman belirtirseniz demo sunumunu planlayabiliriz.{{/if}}
+
+      {{kapanis}}
+
+closing: |
+  Teşekkürler, iyi çalışmalar dilerim.
+  Saygılarımla,

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>PromptGenerator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell" id="shell">
+<div class="aiglow" aria-hidden="true"><div class="ring"></div><div class="halo"></div></div>
+<div class="win" id="win">
+  <div class="shine" aria-hidden="true"></div>
+
+  <header class="top">
+    <button class="back" id="back" aria-label="Geri"><i>‹</i></button>
+    <div class="title pywebview-drag-region" id="title"><span class="dot"></span><span id="titleText">Ne yazalım?</span></div>
+    <div class="status" id="status"></div>
+    <kbd class="esc">Esc</kbd>
+    <div class="loader" id="loader" aria-hidden="true"></div>
+  </header>
+
+  <main class="stage" id="stage">
+    <!-- 1. Mod seçimi -->
+    <section class="panel" data-panel="mode">
+      <div class="modes">
+        <button class="mode spot" data-mode="mail">
+          <span class="ico ico-mail" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg>
+          </span>
+          <span class="mname">Mail</span>
+          <span class="mdesc">Profesyonel, insan gibi yazılmış mail</span>
+          <kbd>M</kbd>
+        </button>
+        <button class="mode spot" data-mode="prompt">
+          <span class="ico ico-prompt" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 7l5 5-5 5"/><path d="M12 17h7"/></svg>
+          </span>
+          <span class="mname">Prompt</span>
+          <span class="mdesc">Tam istediğini anlatan prompt</span>
+          <kbd>P</kbd>
+        </button>
+      </div>
+      <div class="capture" id="captureBox" hidden>
+        <div class="glabel">Seçili metin</div>
+        <div class="capture-text" id="captureText"></div>
+      </div>
+    </section>
+
+    <!-- 2a. Mail seçenekleri -->
+    <section class="panel" data-panel="mail">
+      <div class="seg" id="mailSeg">
+        <button class="seg-btn on" data-seg="free">Serbest yaz <kbd>F</kbd></button>
+        <button class="seg-btn" data-seg="tpl">Şablonlar <kbd>T</kbd></button>
+        <span class="seg-hl" aria-hidden="true"></span>
+      </div>
+      <div id="freeForm">
+        <div class="reply-toggle" id="replyToggle" hidden>
+          <label class="switch"><input type="checkbox" id="replyMode" checked><span></span></label>
+          <span>Seçili maile yanıt olarak yaz</span>
+        </div>
+        <div class="group" data-key="tone" data-label="Ton"></div>
+        <div class="group" data-key="recipient" data-label="Kime"></div>
+        <div class="row2">
+          <div class="group" data-key="length" data-label="Uzunluk"></div>
+          <div class="group" data-key="lang" data-label="Dil"></div>
+        </div>
+        <div class="field spot">
+          <textarea id="mailContext" rows="3" placeholder="Ne söylemek istiyorsun? Örn: Ahmet Bey'e demoyu perşembe 16.00'ya aldığımızı yaz, sebep test ortamı"></textarea>
+        </div>
+      </div>
+      <div id="tplForm" hidden>
+        <div class="group" id="tplGroup"><div class="glabel">Şablon</div><div class="chips" id="tplChips"><div class="hl nomove"></div></div></div>
+        <div class="tpl-fields" id="tplFields"></div>
+        <div class="field spot">
+          <textarea id="tplNote" rows="2" placeholder="Bu sefer farklı olan bir şey var mı? (opsiyonel; yazarsan Gemini şablonu buna göre uyarlar)"></textarea>
+        </div>
+        <div class="tpl-actions">
+          <span class="tpl-src" id="tplSrc"></span>
+          <span class="spacer"></span>
+          <button class="act" id="tplAdapt">Gemini ile uyarla <kbd>Ctrl</kbd><kbd>⇧</kbd><kbd>↵</kbd></button>
+          <button class="act primary" id="tplFill">Doldur <kbd>Ctrl</kbd><kbd>↵</kbd></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2b. Prompt seçenekleri -->
+    <section class="panel" data-panel="prompt">
+      <div class="group" data-key="task" data-label="Konu"></div>
+      <div class="group" data-key="target" data-label="Nereye yapıştıracaksın?"></div>
+      <div class="row2">
+        <div class="group" data-key="detail" data-label="Detay"></div>
+        <div class="group" data-key="plang" data-label="Dil"></div>
+      </div>
+      <div class="field spot">
+        <textarea id="promptIdea" rows="3" placeholder="Ne istiyorsun? Örn: satislar.xlsx'ten aylık bölge özeti çıkaran pandas scripti"></textarea>
+      </div>
+      <div class="questions" id="questions" hidden></div>
+    </section>
+
+    <!-- 3. Önizleme -->
+    <section class="panel" data-panel="preview">
+      <div class="understood" id="understood" hidden></div>
+      <div class="result spot" id="result">
+        <div class="skeleton" id="skeleton"><i></i><i></i><i></i></div>
+        <div class="subject" id="subject" hidden></div>
+        <div class="out" id="out" contenteditable="false" spellcheck="false"></div>
+      </div>
+      <div class="meta" id="meta"></div>
+      <div class="assumptions" id="assumptions" hidden></div>
+      <div class="refine" id="refine"></div>
+    </section>
+  </main>
+
+  <footer class="bar">
+    <div class="crumb" id="crumb">PromptGenerator</div>
+    <div class="hints" id="hints"></div>
+  </footer>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>

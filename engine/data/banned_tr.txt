@@ -1,0 +1,79 @@
+# Türkçe maillerde "bunu yapay zekâ yazmış" dedirten kalıplar.
+# Biçim:  ifade => öneri
+#   - Eşleşme büyük/küçük harfe duyarsızdır ve ek alabilir ("çekinmeyin" → "çekinmeyiniz" de yakalanır).
+#   - "re:" ile başlayan satır düzenli ifadedir.
+#   - "~" ile başlayan satır yumuşak uyarıdır: tek başına düzeltme turu tetiklemez, 2+ tanesi bir arada olursa tetikler.
+
+# --- Çeviri kokan / kalıp açılışlar ---
+umarım bu e-posta sizi iyi bulur => doğrudan konuya girin ya da somut bir bağlamla açın ("Dünkü toplantıda konuştuğumuz…")
+umarım bu mail sizi iyi bulur => doğrudan konuya girin
+umarım bu e-postam sizi iyi bulur => doğrudan konuya girin
+~umarım iyisinizdir
+re:bu (e-postayı|e-postamı|maili|mailimi) .{0,40}(amacıyla|için) (yazıyorum|gönderiyorum|iletiyorum) => amacı doğrudan söyleyin
+size ulaşmak istedim => doğrudan talebi yazın
+size ulaşıyorum => doğrudan talebi yazın
+iletişime geçmek istedim => doğrudan talebi yazın
+
+# --- Sohbet botu kalıntıları / kapanış klişeleri ---
+başka sorunuz olursa çekinmeyin => "Sorunuz olursa yazabilirsiniz." ya da hiç yazmayın
+herhangi bir sorunuz olursa çekinmeden => "Sorunuz olursa yazabilirsiniz."
+çekinmeden bana ulaşabilirsiniz => "Sorunuz olursa yazabilirsiniz."
+çekinmeyin => kaldırın
+umarım yardımcı olur => kaldırın
+umarım faydalı olur => kaldırın
+yardımcı olmaktan memnuniyet duyarım => kaldırın ya da "Destek olabilirim." deyin
+harika bir soru => kaldırın
+kesinlikle haklısınız => "Haklısınız." yeterli
+dönüşünüzü sabırsızlıkla bekliyorum => "Dönüşünüzü bekliyorum." ya da "Görüşünüzü rica ederim."
+sabırsızlıkla bekliyorum => "bekliyorum"
+
+# --- Dolgu ve süs ---
+önemle belirtmek gerekir ki => kaldırın, doğrudan söyleyin
+belirtmek isterim ki => kaldırın, doğrudan söyleyin
+belirtmekte fayda var => kaldırın, doğrudan söyleyin
+şunu belirtmek isterim => kaldırın, doğrudan söyleyin
+bu noktada şunu söylemek => kaldırın
+dürüst olmak gerekirse => kaldırın
+işin aslı şu => kaldırın
+~günümüzde
+günümüzün hızla değişen => kaldırın
+günün sonunda => "sonuçta" ya da kaldırın
+~sonuç olarak
+~özetle
+~kısacası
+
+# --- Bürokratik zincir / abartı ---
+kritik bir rol oynamaktadır => "önemli" ya da somut etkiyi yazın
+kritik bir rol oynar => somut etkiyi yazın
+kilit bir rol => somut etkiyi yazın
+büyük önem arz etmektedir => "önemli"
+önem arz etmektedir => "önemli"
+kritik öneme sahip => "çok önemli" ya da somut etkiyi yazın
+imkânına sahiptir => "-ebilir"
+imkanına sahiptir => "-ebilir"
+olanağına sahiptir => "-ebilir"
+değer katmak => ne sağladığını somut yazın
+değer katacak => ne sağladığını somut yazın
+katma değer sağlayacak => ne sağladığını somut yazın
+re:sadece .{1,60}? değil,? aynı zamanda => "hem … hem de" ya da iki ayrı cümle
+re:yalnızca .{1,60}? değil,? aynı zamanda => "hem … hem de" ya da iki ayrı cümle
+re:\b(bu|söz konusu) (bağlamda|kapsamda|çerçevede|doğrultuda)\b.{0,80}\b(kapsamında|çerçevesinde|doğrultusunda|bağlamında)\b => bürokratik bağlaçları azaltın
+sinerji => kaldırın
+~ekosistem
+paydaşlarımız => kimse onu yazın (müşteri, ekip…)
+yol haritası çıkarmak => "plan yapmak"
+~söz konusu
+~bu bağlamda
+~kapsamlı
+~bütüncül
+~yenilikçi
+~dönüştürücü
+~eşsiz
+~dinamik
+~vizyoner
+~en üst düzeyde
+~sorunsuz bir şekilde
+~etkin bir şekilde
+~verimli bir şekilde
+~titizlikle
+~özenle

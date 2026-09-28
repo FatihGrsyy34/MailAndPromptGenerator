@@ -1,0 +1,46 @@
+# PromptGenerator ayarları. API anahtarı burada DEĞİL: `pg setkey` ile Windows
+# Credential Manager'a kaydedilir (ya da GEMINI_API_KEY ortam değişkeni).
+
+[models]
+# Güncel liste: `pg models`. Kalite = taslak/üretim, fast = analiz/eleştiri/yazım denetimi.
+quality = "gemini-3.6-flash"
+fast = "gemini-3.1-flash-lite"
+# Birincil model yoğunsa (503) ya da kotası dolduysa (429) sırayla bunlar denenir.
+# Ücretsiz kademede her modelin günlük kotası ayrı ve düşük (örn. 20 istek); birden çok model kotayı dağıtır.
+quality_fallbacks = ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3-flash-preview"]
+fast_fallbacks = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.6-flash"]
+embedding = "gemini-embedding-001"
+# Boş bırakılırsa modelin varsayılanı kullanılır. Örn: "low", "medium", "high"
+quality_thinking = "low"
+fast_thinking = "low"
+
+[user]
+name = "Fatih Gürsoy"
+# false: mail kapanış satırlarıyla biter, ad yazılmaz (imzayı Outlook ekliyor). true: sona ad eklenir.
+sign_with_name = false
+title = ""
+company = "Cognera"
+
+[mail]
+default_lang = "tr"
+default_tone = "normal"
+default_recipient = "meslektas"
+default_length = "orta"
+# Humanize/eleştiri turu sayısı üst sınırı
+max_humanize_rounds = 2
+# true: taslak kod kontrollerinden temiz geçerse eleştiri turu atlanır (daha hızlı)
+fast_mode = false
+# Stil profilinden her maile eklenecek benzer gerçek mail sayısı
+style_examples = 4
+
+[prompt]
+default_target = "genel"
+default_detail = "detayli"
+default_lang = "tr"
+
+[hotkey]
+combo = "ctrl+space"
+
+[paths]
+# Stil örnekleri, profil ve önbellek burada tutulur (git'e girmez)
+user_data = "user_data"
