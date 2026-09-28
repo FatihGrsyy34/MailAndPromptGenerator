@@ -46,6 +46,14 @@ def set_dpi_aware() -> None:
         pass
 
 
+def set_app_id(app_id: str) -> None:
+    """Görev çubuğu penceresini pythonw.exe'ye değil bu uygulama kimliğine bağlar (kendi ikonu görünür)."""
+    try:
+        ctypes.WinDLL("shell32").SetCurrentProcessExplicitAppUserModelID(ctypes.c_wchar_p(app_id))
+    except Exception:
+        pass
+
+
 def single_instance(name: str = "PromptGenerator.SingleInstance") -> bool:
     k32.CreateMutexW(None, False, name)
     return ctypes.get_last_error() != 183  # ERROR_ALREADY_EXISTS

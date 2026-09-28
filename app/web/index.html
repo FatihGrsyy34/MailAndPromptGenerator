@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<title>PromptGenerator</title>
+<title>MailPrompt Asistan</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -70,6 +70,9 @@
         <div class="field spot">
           <textarea id="mailContext" rows="3" placeholder="Ne söylemek istiyorsun? Örn: Ahmet Bey'e demoyu perşembe 16.00'ya aldığımızı yaz, sebep test ortamı"></textarea>
         </div>
+        <div class="form-actions"><span class="spacer"></span>
+          <button class="act primary" id="mailGo"><span class="go-label">Yaz</span> <kbd>Ctrl</kbd><kbd>↵</kbd></button>
+        </div>
       </div>
       <div id="tplForm" hidden>
         <div class="group" id="tplGroup"><div class="glabel">Şablon</div><div class="chips" id="tplChips"><div class="hl nomove"></div></div></div>
@@ -96,6 +99,9 @@
       </div>
       <div class="field spot">
         <textarea id="promptIdea" rows="3" placeholder="Ne istiyorsun? Örn: satislar.xlsx'ten aylık bölge özeti çıkaran pandas scripti"></textarea>
+      </div>
+      <div class="form-actions" id="promptActions"><span class="spacer"></span>
+        <button class="act primary" id="promptGo"><span class="go-label">Prompt oluştur</span> <kbd>Ctrl</kbd><kbd>↵</kbd></button>
       </div>
       <div class="questions" id="questions" hidden></div>
     </section>

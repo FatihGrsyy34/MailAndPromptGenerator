@@ -170,7 +170,7 @@ function renderChrome() {
   win.dataset.mode = state.step === "mode" ? "" : state.mode === "fix" ? "mail" : state.mode;
 
   const crumb = $("#crumb");
-  if (state.step === "mode") crumb.innerHTML = "PromptGenerator";
+  if (state.step === "mode") crumb.innerHTML = "MailPrompt Asistan";
   else if (state.mode === "mail" && isDraft()) crumb.innerHTML = `Mail › Taslağı düzelt › <b>${labelOf("fixlevel", state.sel.fixlevel)}</b> · ${labelOf("tone", state.sel.tone)} · ${labelOf("recipient", state.sel.recipient)}`;
   else if (state.mode === "mail" && state.mailSeg === "tpl") {
     const t = state.templates.find((x) => x.id === state.tpl);
@@ -179,11 +179,26 @@ function renderChrome() {
   else crumb.innerHTML = `Prompt › <b>${labelOf("task", state.sel.task)}</b> · ${labelOf("target", state.sel.target)} · ${labelOf("detail", state.sel.detail)}`;
 
   const h = $("#hints");
-  if (state.step === "mode") h.innerHTML = `<span class="h">Mail ${kbd("M")}</span><span class="h">Prompt ${kbd("P")}</span><span class="sep"></span><span class="h main">Seç ${kbd("↵")}</span>`;
-  else if (state.step === "preview") h.innerHTML = `<span class="h">Düzenle ${kbd("E")}</span><span class="h">Kopyala ${kbd("Ctrl")}${kbd("C")}</span><span class="sep"></span><span class="h main">Yapıştır ${kbd("↵")}</span>`;
-  else if (state.mode === "mail" && state.mailSeg === "tpl") h.innerHTML = `<span class="h">Şablon ${kbd("1")}–${kbd("9")}</span><span class="h">Uyarla ${kbd("Ctrl")}${kbd("⇧")}${kbd("↵")}</span><span class="sep"></span><span class="h main">Doldur ${kbd("Ctrl")}${kbd("↵")}</span>`;
-  else h.innerHTML = `<span class="h">Seçenek ${kbd("↑")}${kbd("↓")}${kbd("←")}${kbd("→")}</span><span class="sep"></span><span class="h main">${state.mode === "mail" && isDraft() ? "Düzelt" : "Yaz"} ${kbd("Ctrl")}${kbd("↵")}</span>`;
+  if (state.step === "mode") h.innerHTML = `<span class="h">Mail ${kbd("M")}</span><span class="h">Prompt ${kbd("P")}</span><span class="sep"></span><button class="h main" data-mainact>Seç ${kbd("↵")}</button>`;
+  else if (state.step === "preview") h.innerHTML = `<span class="h">Düzenle ${kbd("E")}</span><span class="h">Kopyala ${kbd("Ctrl")}${kbd("C")}</span><span class="sep"></span><button class="h main" data-mainact>Yapıştır ${kbd("↵")}</button>`;
+  else if (state.mode === "mail" && state.mailSeg === "tpl") h.innerHTML = `<span class="h">Şablon ${kbd("1")}–${kbd("9")}</span><span class="h">Uyarla ${kbd("Ctrl")}${kbd("⇧")}${kbd("↵")}</span><span class="sep"></span><button class="h main" data-mainact>Doldur ${kbd("Ctrl")}${kbd("↵")}</button>`;
+  else h.innerHTML = `<span class="h">Seçenek ${kbd("↑")}${kbd("↓")}${kbd("←")}${kbd("→")}</span><span class="sep"></span><button class="h main" data-mainact>${goLabel()} ${kbd("Ctrl")}${kbd("↵")}</button>`;
+  // formdaki ana butonların etiketi de duruma göre
+  $("#mailGo .go-label").textContent = state.mode === "mail" && isDraft() ? "Düzelt" : "Yaz";
+  $("#promptGo .go-label").textContent = state.captured ? "Prompt'u geliştir" : "Prompt oluştur";
 }
+function goLabel() {
+  if (state.mode === "mail") return isDraft() ? "Düzelt" : "Yaz";
+  return state.captured ? "Geliştir" : "Oluştur";
+}
+// Ana eylem: klavyedeki Enter / Ctrl+Enter ile aynı işi yapar
+function mainAction() {
+  if (state.step === "mode") return chooseMode($$(".mode").findIndex((m) => m.classList.contains("kb")) === 1 ? "prompt" : "mail");
+  if (state.step === "preview") return state.busy ? null : pasteOut();
+  if (state.step === "prompt" && !$("#questions").hidden) return finishPrompt();
+  return generate();
+}
+document.addEventListener("click", (e) => { if (e.target.closest("[data-mainact]")) mainAction(); });
 
 // ---------------------------------------------------------------- 1. mod
 function chooseMode(mode) {
@@ -192,6 +207,7 @@ function chooseMode(mode) {
   if (mode === "mail" && state.captured) { setSeg("free"); setRole(state.capRole); }
   if (mode === "prompt" && state.captured && !$("#promptIdea").value.trim()) $("#promptIdea").value = state.captured;
   go(mode);
+  growAll(); setTimeout(growAll, 80);
 }
 
 // Seçili metnin rolü: kendi taslağım (düzelt) ya da gelen mail (yanıtla)
@@ -206,6 +222,7 @@ function setRole(role) {
   const ta = $("#mailContext");
   if (draft && (!ta.value.trim() || ta.dataset.auto === "reply")) { ta.value = state.captured; ta.dataset.auto = "draft"; }
   if (!draft && ta.dataset.auto === "draft" && ta.value === state.captured) { ta.value = ""; ta.dataset.auto = "reply"; }
+  autoGrow(ta); setTimeout(() => autoGrow(ta), 80);
   ta.placeholder = draft ? "Seçtiğin metin burada, istersen düzenle" : "Ne cevap vermek istiyorsun? Örn: salı uygun, Burak da katılacak, linki ben atarım";
   renderChrome();
   requestAnimationFrame(() => { layoutAllHL(true); fitStage(); if (on && on.offsetWidth) { hl.style.width = on.offsetWidth + "px"; hl.style.transform = `translateX(${on.offsetLeft - 3}px)`; } });
@@ -336,6 +353,7 @@ function shake(el) {
 function showQuestions(qs) {
   const box = $("#questions");
   box.hidden = false;
+  $("#promptActions").hidden = true;
   state.answers = {};
   box.innerHTML = `<div class="qtitle">Tam istediğini yazabilmem için şunları netleştirelim (boş bırakırsan varsayımla devam ederim)</div>` +
     qs.map((q, qi) => `<div class="q">${esc(q.question)}<small>Varsayım: ${esc(q.default || "")}</small></div>
@@ -359,6 +377,7 @@ function showQuestions(qs) {
 async function finishPrompt() {
   if (state.busy) return;
   $("#questions").hidden = true;
+  $("#promptActions").hidden = false;
   go("preview");
   startBusy();
   try { const r = await api.prompt_finish({ answers: state.answers }); endBusy(); showPrompt(r); }
@@ -607,6 +626,8 @@ async function tplRun(adapt) {
   } catch (e) { endBusy(false); showError(e); }
 }
 $("#tplFill").addEventListener("click", () => tplRun(false));
+$("#mailGo").addEventListener("click", () => generate());
+$("#promptGo").addEventListener("click", () => generate());
 $("#tplAdapt").addEventListener("click", () => tplRun(true));
 
 // ---------------------------------------------------------------- klavye
@@ -713,9 +734,10 @@ window.resetForShow = (captured, mode, hideOnly) => {
   if (hideOnly) return;
   win.style.animation = "none"; void win.offsetWidth; win.style.animation = "";
   $("#mailContext").value = ""; $("#mailContext").dataset.auto = ""; $("#promptIdea").value = ""; $("#tplNote").value = "";
+  $$(".field textarea, .tf textarea").forEach((el) => { el.style.height = ""; });
   state.capRole = "draft"; state.result = null;
   $$("#tplFields [data-f]").forEach((el) => { if (el.type === "checkbox") el.checked = false; else el.value = ""; });
-  $("#questions").hidden = true;
+  $("#questions").hidden = true; $("#promptActions").hidden = false;
   applyCapture(captured || "");
   setStatus("");
   if (mode) chooseMode(mode); else go("mode");
@@ -733,7 +755,7 @@ window.setCaptured = (text) => {
   // kullanıcı metin gelmeden Mail/Prompt'a geçtiyse kutuyu şimdi doldur
   if (text && state.step === "mail") setRole(state.capRole);
   if (text && state.step === "prompt" && !$("#promptIdea").value.trim()) $("#promptIdea").value = text;
-  renderChrome(); fitStage();
+  renderChrome(); growAll(); fitStage();
 };
 
 // Pencereyi sürükle: üst/alt çubuğa (buton dışında) basılınca taşımayı Windows'a devret
@@ -743,6 +765,16 @@ document.addEventListener("pointerdown", (e) => {
   e.preventDefault();
   api.start_drag();
 });
+
+// Yazı kutuları içerikle büyüsün (CSS'teki max-height'a kadar), sonrası kaydırılır
+function autoGrow(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight + 2, 240) + "px";
+  fitStage();
+}
+function growAll() { $$(".field textarea, .tf textarea").forEach(autoGrow); }
+document.addEventListener("input", (e) => { if (e.target.matches(".field textarea, .tf textarea")) autoGrow(e.target); });
 
 let booted = false;
 window.addEventListener("pywebviewready", () => { if (!booted) { booted = true; boot(window.pywebview.api); } });

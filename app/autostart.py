@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-NAME = "PromptGenerator.lnk"
+NAME = "MailPrompt Asistan.lnk"
+OLD_NAMES = ("PromptGenerator.lnk",)
+ICON = ROOT / "app" / "assets" / "app.ico"
 
 
 def _startup_dir() -> Path:
@@ -20,7 +22,7 @@ def _pythonw() -> Path:
 
 
 def is_enabled() -> bool:
-    return (_startup_dir() / NAME).exists()
+    return (_startup_dir() / NAME).exists() or any((_startup_dir() / n).exists() for n in OLD_NAMES)
 
 
 def enable() -> None:
@@ -31,12 +33,17 @@ def enable() -> None:
     link.TargetPath = str(_pythonw())
     link.Arguments = "-m app.main"
     link.WorkingDirectory = str(ROOT)
-    link.Description = "PromptGenerator (Ctrl+Space ile mail ve prompt)"
+    link.Description = "MailPrompt Asistan (Ctrl+Space ile mail ve prompt)"
+    if ICON.exists():
+        link.IconLocation = str(ICON)
     link.Save()
+    for n in OLD_NAMES:  # eski adlı kısayol kalmasın
+        (_startup_dir() / n).unlink(missing_ok=True)
 
 
 def disable() -> None:
-    (_startup_dir() / NAME).unlink(missing_ok=True)
+    for n in (NAME, *OLD_NAMES):
+        (_startup_dir() / n).unlink(missing_ok=True)
 
 
 def toggle() -> bool:

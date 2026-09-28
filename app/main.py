@@ -22,6 +22,10 @@ from app.bridge import WIDTH, Api  # noqa: E402
 from engine.config import load_config  # noqa: E402
 
 WEB = ROOT / "app" / "web" / "index.html"
+ICON = ROOT / "app" / "assets" / "app.ico"
+TRAY_ICON = ROOT / "app" / "assets" / "tray.png"
+APP_NAME = "MailPrompt Asistan"
+APP_ID = "Cognera.MailPromptAsistan"  # görev çubuğu bu kimlikle gruplar, Python ikonu yerine uygulamanınki görünür
 STARTED = time.time()
 TRIM_AFTER = 30.0  # saniye: gizlendikten bu kadar sonra boştaki belleği Windows'a geri ver
 LOG = ROOT / "user_data" / "app.log"
@@ -53,7 +57,7 @@ class Shell:
         self.ready = threading.Event()
         self.api = Api(self)
         self.window = webview.create_window(
-            "PromptGenerator", url=str(WEB), js_api=self.api,
+            APP_NAME, url=str(WEB), js_api=self.api,
             width=WIDTH, height=self.height, frameless=True, easy_drag=False, on_top=True,
             hidden=True, resizable=False, shadow=True, background_color="#111213", focus=True,
         )
@@ -65,15 +69,30 @@ class Shell:
         try:
             self.hwnd = int(self.window.native.Handle.ToInt64())
             winapi.style_window(self.hwnd, dark=True)
-            winapi.hide_from_taskbar(self.hwnd)
+            self._set_icon()
             self._enable_native_drag()
-            # Pencere dışına tıklanınca gizlen (komut paleti davranışı)
+            # Başka pencereye geçince gizlenmez; sadece "her zaman üstte" kalkar ki diğer pencerelerin arkasına geçsin
             self.window.native.Deactivate += lambda sender, args: self._on_deactivate()
         except Exception as e:
             log("style error", e)
         if self.visible is False:
             self.window.hide()  # bir şey erken gösterdiyse gizli başla
         self.ready.set()
+
+    def _set_icon(self) -> None:
+        """Pencere/görev çubuğu/Alt+Tab ikonu: Python yerine uygulamanın kendi ikonu."""
+        from System import Action
+        from System.Drawing import Icon
+
+        form = self.window.native
+        if ICON.exists():
+            form.Invoke(Action(lambda: setattr(form, "Icon", Icon(str(ICON)))))
+
+    def _set_topmost(self, on: bool) -> None:
+        from System import Action
+
+        form = self.window.native
+        form.BeginInvoke(Action(lambda: setattr(form, "TopMost", on)))
 
     def _enable_native_drag(self) -> None:
         from System import Action
@@ -92,12 +111,10 @@ class Shell:
         self.window.native.BeginInvoke(Action(run))
 
     def _on_deactivate(self) -> None:
-        # Gösterimden hemen sonraki geçici odak değişimlerini yok say
+        # Alt+Tab ya da başka pencereye tıklama: pencere kapanmaz, yazılanlar kaybolmaz; sadece öne çıkmayı bırakır.
+        # Görev çubuğundan, Alt+Tab'dan ya da tekrar Ctrl+Space ile geri gelinir; kapatmak için Esc.
         if self.visible and time.time() - self.shown_at > 0.4:
-            log("deactivate → hide")
-            self.window.hide()
-            self.visible = False
-            self._schedule_idle()
+            self._set_topmost(False)
 
     # ---------- gizliyken kaynak tasarrufu ----------
     def _webview_idle(self, idle: bool) -> None:
@@ -170,6 +187,7 @@ class Shell:
         px, py = winapi.place_near(x, y, int(WIDTH * scale), int(max(self.height, 420) * scale))
         self.shown_at = time.time()
         self.visible = True
+        self._set_topmost(True)
         self.window.move(int(px / scale), int(py / scale))
         self.window.show()
         if self.hwnd:
@@ -180,6 +198,12 @@ class Shell:
         if not self.ready.is_set():
             return
         fg = winapi.foreground()
+        if self.visible and fg != self.hwnd:
+            # açık ama arkada kalmış: sıfırlamadan öne getir
+            self._set_topmost(True)
+            winapi.force_foreground(self.hwnd)
+            self.js("window.focus()")
+            return
         if self.visible and fg == self.hwnd:
             return self.hide(restore_focus=True)
         t0 = time.perf_counter()
@@ -214,11 +238,12 @@ class Shell:
             import pystray
             from PIL import Image, ImageDraw
 
-            img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-            d = ImageDraw.Draw(img)
-            d.rounded_rectangle((4, 4, 60, 60), radius=16, fill=(113, 112, 255, 255))
-            d.polygon([(20, 22), (32, 32), (20, 42)], fill=(255, 255, 255, 255))
-            d.rectangle((34, 40, 46, 44), fill=(255, 255, 255, 255))
+            if TRAY_ICON.exists():
+                img = Image.open(TRAY_ICON)
+            else:
+                img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+                d = ImageDraw.Draw(img)
+                d.rounded_rectangle((4, 4, 60, 60), radius=16, fill=(113, 112, 255, 255))
 
             def open_(icon, item):
                 self.prev_hwnd = winapi.foreground()
@@ -248,7 +273,7 @@ class Shell:
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Çıkış", quit_),
             )
-            pystray.Icon("PromptGenerator", img, "PromptGenerator", menu).run_detached()
+            pystray.Icon("MailPromptAsistan", img, APP_NAME, menu).run_detached()
         except Exception as e:
             log("tray error", e)
 
@@ -298,6 +323,7 @@ def main() -> None:
         "--renderer-process-limit=1",
     ]))
     winapi.set_dpi_aware()
+    winapi.set_app_id(APP_ID)
     if not winapi.single_instance():
         print("PromptGenerator zaten çalışıyor.")
         return

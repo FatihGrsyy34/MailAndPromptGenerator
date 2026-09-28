@@ -6,7 +6,8 @@ Windows'ta her yerden **Ctrl+Space** ile açılır: seçenekleri seçip birkaç 
 
 ## Masaüstü uygulaması
 - Başlatma: `PromptGenerator.cmd` dosyasına çift tıklayın (konsol penceresi açılmaz). Sağ alttaki tepside mor ikon çıkar.
-- Herhangi bir uygulamada **Ctrl+Space**: pencere imlecin yanında açılır. Metin seçiliyse otomatik alınır (seçili bir maile yanıt yazmak için).
+- Herhangi bir uygulamada **Ctrl+Space**: pencere imlecin yanında açılır. Metin seçiliyse otomatik alınır.
+- Başka pencereye geçince (Alt+Tab) pencere kapanmaz, arkaya geçer; görev çubuğundaki MailPrompt Asistan ikonundan, Alt+Tab'dan ya da tekrar Ctrl+Space ile yazdıklarınız kaybolmadan geri gelir. Öndeyken Ctrl+Space ya da `Esc` kapatır. Pencere üst/alt çubuktan sürüklenir.
 - **Seçili metinle çalışma:** Metni seçip Ctrl+Space → `M` ya da `P`; seçili metin kutuya aktarılır.
   - Mail: "Benim taslağım · düzelt" (varsayılan) seçiliyken ton, alıcı ve "Profesyonelleştir / Sadece yazım-noktalama" seçilip **Düzelt**; seçili metin gelen bir mailse "Gelen mail · yanıtla" ile ne cevap vereceğinizi yazarsınız.
   - Prompt: seçili metin fikir olarak alınır, konu/hedef/detay seçilip daha detaylı ve profesyonel prompt üretilir.

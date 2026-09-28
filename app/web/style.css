@@ -182,8 +182,8 @@ body.native .top button, body.native .bar button { cursor: pointer; }
 .fix-src { margin-bottom: 12px; max-height: 76px; }
 .capture-text {
   font-size: 12.5px; color: var(--t2); background: var(--s-rest); border: 1px dashed rgba(255,255,255,0.10);
-  border-radius: 10px; padding: 8px 10px; max-height: 58px; overflow: hidden; line-height: 1.45;
-  -webkit-mask-image: linear-gradient(#000 60%, transparent);
+  border-radius: 10px; padding: 8px 10px; max-height: 132px; overflow-y: auto; line-height: 1.45;
+  white-space: pre-wrap; overscroll-behavior: contain;
 }
 
 /* ---------- çip grupları (kayan seçim vurgusu) ---------- */
@@ -225,6 +225,7 @@ body.native .top button, body.native .bar button { cursor: pointer; }
   display: block; width: 100%; resize: none; border: 0; outline: 0; background: transparent;
   color: var(--t1); font-size: 14px; line-height: 1.5; padding: 10px 12px; caret-color: var(--accent);
   user-select: text; position: relative; z-index: 1;
+  max-height: 240px; overflow-y: auto; overscroll-behavior: contain;  /* içerikle büyür, sonra kayar (app.js autoGrow) */
 }
 .field textarea::placeholder { color: var(--t4); }
 
@@ -245,8 +246,9 @@ body.native .top button, body.native .bar button { cursor: pointer; }
 /* ---------- 3. önizleme ---------- */
 .understood { font-size: 12.5px; color: var(--t2); margin: 0 2px 10px; padding-left: 10px; border-left: 2px solid var(--prompt); border-radius: 0; line-height: 1.45; }
 .result { border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--line-soft); padding: 12px 14px; min-height: 120px; max-height: 300px; overflow: auto; }
-.result::-webkit-scrollbar { width: 8px; }
-.result::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 8px; }
+.result::-webkit-scrollbar, .capture-text::-webkit-scrollbar, .field textarea::-webkit-scrollbar, .tf textarea::-webkit-scrollbar { width: 8px; }
+.result::-webkit-scrollbar-thumb, .capture-text::-webkit-scrollbar-thumb, .field textarea::-webkit-scrollbar-thumb, .tf textarea::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 8px; }
+.result::-webkit-scrollbar-thumb:hover, .capture-text::-webkit-scrollbar-thumb:hover, .field textarea::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.24); }
 .subject { font-size: 12.5px; color: var(--t3); padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1px solid var(--line-soft); }
 .subject b { color: var(--t1); font-weight: 510; }
 .out { font-size: 14.5px; line-height: 1.6; color: var(--t1); white-space: pre-wrap; user-select: text; outline: 0; position: relative; z-index: 1; }
@@ -348,6 +350,11 @@ kbd {
 .tf.err input, .tf.err textarea { border-color: rgba(242, 179, 91, 0.6); }
 .tf.check { flex-direction: row; align-items: center; gap: 10px; font-size: 12.5px; color: var(--t2); padding-top: 18px; }
 .tpl-actions { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+.form-actions { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+/* alt çubuktaki ana ipucu da tıklanabilir bir butondur */
+button.h { font: inherit; font-size: 12px; color: var(--t2); padding: 3px 6px; margin: 0 -6px 0 0; border-radius: 7px; transition: background 150ms, color 150ms; }
+button.h:hover { background: var(--s-hover); color: var(--t1); }
+button.h:active { transform: scale(0.97); }
 .tpl-src { font-size: 11.5px; color: var(--t4); }
 .tpl-src.draft { color: var(--warn); }
 .chip .badge { font-size: 10px; color: var(--warn); border: 1px solid rgba(242,179,91,0.35); border-radius: 5px; padding: 0 4px; }
