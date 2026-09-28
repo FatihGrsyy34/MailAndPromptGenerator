@@ -66,6 +66,7 @@ class Shell:
             self.hwnd = int(self.window.native.Handle.ToInt64())
             winapi.style_window(self.hwnd, dark=True)
             winapi.hide_from_taskbar(self.hwnd)
+            self._enable_native_drag()
             # Pencere dışına tıklanınca gizlen (komut paleti davranışı)
             self.window.native.Deactivate += lambda sender, args: self._on_deactivate()
         except Exception as e:
@@ -73,6 +74,22 @@ class Shell:
         if self.visible is False:
             self.window.hide()  # bir şey erken gösterdiyse gizli başla
         self.ready.set()
+
+    def _enable_native_drag(self) -> None:
+        from System import Action
+
+        form = self.window.native
+        form.Invoke(Action(lambda: setattr(form, "MaximizeBox", False)))  # başlığa çift tıklayınca tam ekran olmasın
+
+    def start_drag(self) -> None:
+        """Arayüzde üst/alt çubuğa basılınca çağrılır: Windows'a 'başlık çubuğu tutuldu' der, sürüklemeyi Windows yapar
+        (WebView2 içindeki fare olayları pencereyi kendi başına taşıyamıyor)."""
+        from System import Action
+
+        def run():
+            winapi.begin_native_drag(self.hwnd)
+
+        self.window.native.BeginInvoke(Action(run))
 
     def _on_deactivate(self) -> None:
         # Gösterimden hemen sonraki geçici odak değişimlerini yok say

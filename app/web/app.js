@@ -657,6 +657,14 @@ window.onShown = () => {
 // Seçili metin pencere açıldıktan sonra gelir
 window.setCaptured = (text) => { applyCapture(text || ""); fitStage(); };
 
+// Pencereyi sürükle: üst/alt çubuğa (buton dışında) basılınca taşımayı Windows'a devret
+document.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0 || api === mock || !api.start_drag) return;
+  if (!e.target.closest(".top, .bar") || e.target.closest("button, a, input, textarea, [contenteditable='true']")) return;
+  e.preventDefault();
+  api.start_drag();
+});
+
 let booted = false;
 window.addEventListener("pywebviewready", () => { if (!booted) { booted = true; boot(window.pywebview.api); } });
 setTimeout(() => { if (!booted && !window.pywebview) { booted = true; boot(null); } }, 250);

@@ -335,6 +335,15 @@ def hide_from_taskbar(hwnd: int) -> None:
     u32.SetWindowPos(h, None, 0, 0, 0, 0, SWP_NOMOVE | 0x1 | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED)
 
 
+def begin_native_drag(hwnd: int) -> None:
+    """Fare basılıyken pencerenin Windows'un kendi taşıma döngüsüne girmesini sağlar (başlık çubuğundan tutmak gibi)."""
+    pt = wintypes.POINT()
+    u32.GetCursorPos(ctypes.byref(pt))
+    u32.ReleaseCapture()
+    lparam = (pt.y & 0xFFFF) << 16 | (pt.x & 0xFFFF)
+    u32.PostMessageW(wintypes.HWND(hwnd), 0x00A1, 2, lparam)  # WM_NCLBUTTONDOWN, HTCAPTION
+
+
 def trim_memory() -> None:
     """Boştaki sürecin çalışma kümesini Windows'a geri verir (sayfalar gerektiğinde bellekten hızla geri gelir)."""
     try:

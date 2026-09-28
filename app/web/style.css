@@ -53,7 +53,9 @@ body.native .shine { inset: 0; border-radius: 8px; }
 body.native .aiglow { inset: 0; z-index: 5; border-radius: 8px; padding: 2px;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 body.native .aiglow .halo { display: none; }
-body.native .top { -webkit-app-region: no-drag; }
+/* Üst ve alt çubuk tutulup sürüklenebilir (app.js → api.start_drag) */
+body.native .top, body.native .bar { cursor: grab; }
+body.native .top button, body.native .bar button { cursor: pointer; }
 
 /* ---------- pencere ---------- */
 .shell { position: relative; width: 640px; }

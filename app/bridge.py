@@ -169,6 +169,10 @@ class Api:
         self._shell.hide(restore_focus=True)
         return True
 
+    def start_drag(self):
+        self._shell.start_drag()
+        return True
+
     def resize(self, height):
         self._shell.resize(int(height))
         return True
