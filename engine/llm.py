@@ -161,6 +161,8 @@ class GeminiLLM:
             return "Gemini kota sınırına ulaşıldı. Biraz bekleyip tekrar deneyin."
         if code in (500, 502, 503, 504):
             return "Gemini şu an yoğun, yedek modeller de yanıt vermedi. Birkaç saniye sonra tekrar deneyin."
+        if code == 404:
+            return "Ayarlardaki Gemini modeli bulunamadı. config.toml'daki model adlarını kontrol edin (pg models)."
         if e is not None and "timed out" in str(e).lower():
             return "Gemini zamanında yanıt vermedi. İnternet bağlantınızı kontrol edip tekrar deneyin."
         return f"Gemini hatası ({model}): {str(e)[:300]}"

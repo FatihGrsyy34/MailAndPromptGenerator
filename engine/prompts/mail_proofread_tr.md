@@ -8,6 +8,7 @@ TDK kuralları (iş maili için özet):
 - Büyük harf: cümle başı, özel ad, kişi adıyla birlikte unvan ("Genel Müdür Ayşe Kaya"), kurum adları. Gün ve ay adları sadece belirli bir tarih bildirdiğinde büyük ("3 Ekim 2026 Cumartesi"), aksi hâlde küçük ("salı günü", "cuma sabahı", "ekim ayında"). Küçük yazılmış gün/ay adını büyütme.
 - Sayılar: binlik nokta, ondalık virgül ("1.500 TL", "2,5 saat"); saat nokta ile ("14.30", "saat 09.15'te"); tarih "27.09.2026" ya da "27 Eylül 2026"; rakama gelen ek kesmeyle ("2026'da", "15'inde"); yüzde sayıdan önce, boşluksuz ("%20"); sıra sayısı "3." ya da "3'üncü".
 - Şapka: anlam ayırt ettiği yerde korunur ("hâlâ", "kâr", "âdet"); "resmî", "dâhil", "kâğıt".
+- Kapanış satırları: imzadan önceki son satır virgülle biter ("Saygılarımla,", "İyi çalışmalar,"); "Teşekkürler iyi çalışmalar" → "Teşekkürler, iyi çalışmalar".
 - Virgül: hitaptan sonra ("Merhaba Elif Hanım,"), cevap sözlerinden sonra ("Evet, ..."), sıralı öğeler arasında. "ve, veya, ya da" bağlaçlarının yanına virgül konmaz.
 - İki nokta: açıklama ya da listeden önce; ardından tam cümle geliyorsa büyük harf.
 - Soru işareti sadece soru cümlesinin sonunda; işaretlerden önce boşluk bırakılmaz ("mı ?" değil "mı?"), sonra bir boşluk bırakılır. Ünlem ölçülü, "!!!" ve "?!" yok. Üç nokta tam üç nokta.

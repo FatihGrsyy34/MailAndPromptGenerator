@@ -430,9 +430,11 @@ class MailPipeline:
         body = _format_cleanup(body)
         subject, body = self._proofread_if_needed(req, subject, body, trace)
         body = _tidy_signature(_format_cleanup(body), self._signature())
+        draft_body = d.body
         if not self._signature():
+            draft_body = _strip_name_signature(draft_body, self.config.user)
             body = _strip_name_signature(body, self.config.user)
-        body = _keep_standard_closing(d.body, body)
+        body = _keep_standard_closing(draft_body, body)
         if req.lang == "tr":
             body = _fix_day_case(body)
         final = self._checks(subject, body, req.lang) + self._length_issue(body, req)

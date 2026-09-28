@@ -348,7 +348,7 @@ async function generate(extra = {}) {
         return;
       }
       go("preview"); startBusy(); endBusy(); showPrompt(r);
-    } catch (e) { state.busy = false; busyFx(false); go("preview"); showError(e); }
+    } catch (e) { state.busy = false; busyFx(false); go("preview"); startBusy(); endBusy(false); showError(e); }
   }
 }
 
@@ -357,7 +357,14 @@ function shake(el, focusEl) {
   (focusEl || el.querySelector("textarea"))?.focus();
 }
 
+// Kapatılıp yeniden açılan pencerede eski isteğin sonucu gelirse yok say
+function discarded() {
+  if (state.discard > 0) { state.discard -= 1; busyFx(false); return true; }
+  return false;
+}
+
 function showQuestions(qs) {
+  if (discarded()) return;
   const box = $("#questions");
   box.hidden = false;
   $("#promptActions").hidden = true;
@@ -418,6 +425,7 @@ const actionsHtml = () => `<div class="actions">${state.result && state.result.s
 function pill(text, kind = "") { return `<span class="pill ${kind}">${esc(text)}</span>`; }
 
 function showMail(r) {
+  if (discarded()) return;
   state.result = r;
   renderChrome();  // başlık sonuca göre ("Düzeltilmiş mail" vb.)
   const subj = $("#subject");
@@ -454,6 +462,7 @@ function showMail(r) {
 }
 
 function showPrompt(r) {
+  if (discarded()) return;
   state.result = r;
   const u = $("#understood");
   u.hidden = false;
@@ -476,6 +485,8 @@ function showPrompt(r) {
 }
 
 function showError(e) {
+  if (discarded()) return;
+  setStatus("Hata", "warn");
   $("#skeleton").hidden = true;
   $("#out").classList.remove("mono");
   $("#out").textContent = "Bir sorun oldu: " + (e && e.message ? e.message : e);
@@ -508,6 +519,7 @@ async function regenerate() {
   if (state.mode === "mail" && state.result && state.result.template) return tplRun(true);
   if (state.result && state.result.fix) { go("mail"); return generate(); }
   if (state.mode === "mail") { go("mail"); return generate(); }
+  if (!state.result || !state.result.prompt) { go("prompt"); return generate(); }  // hatadan sonra: baştan dene
   const assumptions = $$("#assumptions span[data-i]").map((s) => s.innerText.trim()).filter(Boolean);
   startBusy();
   try { const r = await api.prompt_regenerate({ assumptions }); endBusy(); showPrompt(r); }
@@ -671,7 +683,8 @@ document.addEventListener("keydown", (e) => {
       if (state.mode === "mail") return generate({ adapt: e.shiftKey });
       return $("#questions").hidden ? generate() : finishPrompt();
     }
-    if (state.mode === "mail" && !typing && (e.key.toLowerCase() === "t" || e.key.toLowerCase() === "f")) {
+    if (state.mode === "mail" && (!typing || e.altKey) && !e.ctrlKey && (e.key.toLowerCase() === "t" || e.key.toLowerCase() === "f")) {
+      e.preventDefault();
       return setSeg(e.key.toLowerCase() === "t" ? "tpl" : "free");
     }
     if (state.mode === "mail" && state.mailSeg === "tpl" && !typing) {
@@ -732,6 +745,7 @@ async function boot(realApi) {
   go("mode");
 }
 function applyCapture(text) {
+  text = (text || "").replace(/\r\n?/g, "\n");
   state.captured = text;
   $("#captureBox").hidden = !text;
   $("#captureText").textContent = text;
@@ -745,7 +759,8 @@ window.resetForShow = (captured, mode, hideOnly) => {
   win.style.animation = "none"; void win.offsetWidth; win.style.animation = "";
   $("#mailContext").value = ""; $("#mailContext").dataset.auto = ""; $("#promptIdea").value = ""; $("#tplNote").value = "";
   $$(".field textarea, .tf textarea").forEach((el) => { el.style.height = ""; });
-  state.capRole = "draft"; state.result = null;
+  state.capRole = "draft"; state.result = null; state.mailSeg = "free";
+  if (state.busy) { state.discard = (state.discard || 0) + 1; state.busy = false; }  // eski isteğin sonucu gösterilmez
   $$("#tplFields [data-f]").forEach((el) => { if (el.type === "checkbox") el.checked = false; else el.value = ""; });
   $("#questions").hidden = true; $("#promptActions").hidden = false;
   applyCapture(captured || "");

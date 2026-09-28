@@ -238,7 +238,7 @@ def finish_copy(saved: str | None, before: int, timeout: float = 0.3) -> str:
     while time.time() < end:
         if u32.GetClipboardSequenceNumber() != before:
             time.sleep(0.03)
-            text = get_clipboard_text() or ""
+            text = (get_clipboard_text() or "").replace("\r\n", "\n").replace("\r", "\n")
             set_clipboard_text(saved)
             return text.strip()
         time.sleep(0.01)
