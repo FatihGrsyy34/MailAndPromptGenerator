@@ -252,7 +252,8 @@ class MailPipeline:
         self._step(trace, "humanize", t, score=result.scores.total, problems=result.problems)
         return result
 
-    def proofread(self, req: MailRequest, subject: str, body: str, issues: list[Issue], trace: list) -> tuple[str, str]:
+    def proofread(self, req: MailRequest, subject: str, body: str, issues: list[Issue], trace: list,
+                  min_ratio: float = 0.85) -> tuple[str, str]:
         self.on_step("Yazım kontrolü")
         t = time.perf_counter()
         spelling = [i for i in issues if i.kind == "spelling"]
@@ -261,13 +262,54 @@ class MailPipeline:
         result = self.llm.generate(tier="fast", system=system, user=user, schema=Proofread)
         # Yazım denetimi sadece hata düzeltmeli; metni yeniden yazdıysa reddet
         ratio = difflib.SequenceMatcher(None, body, result.body).ratio()
-        accepted = ratio >= 0.85 and word_count(result.body) >= word_count(body) * 0.9
+        # Kelime düzeyinde de bak: çok hatalı kısa metinde karakter oranı düşer ama kelime sırası aynı kalır
+        words_ratio = difflib.SequenceMatcher(None, body.split(), result.body.split()).ratio()
+        same_len = 0.9 <= word_count(result.body) / max(1, word_count(body)) <= 1.15
+        accepted = same_len and (ratio >= min_ratio or (ratio >= 0.7 and words_ratio >= 0.5))
         self._step(trace, "proofread", t, similarity=round(ratio, 3), accepted=accepted,
                    changes=[f"{c.from_text} → {c.to_text}" for c in result.changes])
         if not accepted:
             return subject, body
         new_body = _keep_lowercase_days(body, result.body) if req.lang == "tr" else result.body
         return (result.subject if subject else subject), new_body
+
+    # ---- seçili metni düzeltme ----
+    def fix_text(self, text: str, level: str = "iyilestir", tone: str = "", note: str = "", lang: str = "") -> MailResult:
+        """Kullanıcının kendi yazdığı metni düzeltir.
+        level="yazim": sadece yazım/noktalama (kelimelere dokunmaz); "iyilestir": dili akıcı ve profesyonel yapar."""
+        from .style_profile import detect_lang
+
+        trace: list[dict] = []
+        lang = lang or detect_lang(text)
+        req = MailRequest(context=text, lang=lang)
+        body = text.strip()
+        if level != "yazim":
+            self.on_step("Metin iyileştiriliyor")
+            t = time.perf_counter()
+            tone_data = self.data["tones"].get(tone) if tone else None
+            system = render(
+                load_prompt("mail_fix"), sender=self._sender(), language_name=LANG_NAMES[lang],
+                lang_tr=lang == "tr", tone_label=tone_data["label_en"] if tone_data else "",
+                tone_card=tone_data["card"].strip() if tone_data else "", no_tone_card=not tone_data,
+                banned=banned_phrase_list(lang, limit=40), style_profile=self.style.profile_text(),
+            )
+            user = f"<text>\n{body}\n</text>\n\n<note>\n{note.strip()}\n</note>"
+            d = self.llm.generate(tier="quality", system=system, user=user, schema=Draft)
+            self._step(trace, "fix", t)
+            body = _format_cleanup(d.body.strip())
+            notes = d.notes
+        else:
+            notes = ""
+        issues = self._checks("", body, lang)
+        _, fixed = self.proofread(req, "", body, issues, trace, min_ratio=0.7 if level == "yazim" else 0.85)
+        fixed = _format_cleanup(fixed)
+        if lang == "tr":
+            fixed = _fix_day_case(fixed)
+        if level == "yazim":
+            changes = [c for s in trace if s.get("step") == "proofread" for c in s.get("changes", [])]
+            notes = f"{len(changes)} yazım/noktalama düzeltmesi" if changes else "Yazım ve noktalama hatası bulunamadı"
+        final = [i for i in self._checks("", fixed, lang) if "madde" not in i.message]
+        return MailResult(subject="", body=fixed, notes=notes, warnings=final, trace=trace)
 
     # ---- şablon uyarlama ----
     def adapt_template(self, label: str, subject: str, body: str, note: str, lang: str = "tr") -> MailResult:

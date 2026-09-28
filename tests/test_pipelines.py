@@ -181,3 +181,18 @@ def test_templates_fill_without_llm_and_adapt_keeps_closing(tmp_path):
     res = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).adapt_template("PDD hatırlatma", f.subject, f.body, "kısalt")
     assert res.body.rstrip().endswith("Saygılarımla,")
     assert "<note>\nkısalt\n</note>" in llm.calls[0]["user"]
+
+
+def test_fix_text_levels(tmp_path):
+    src = "Merhaba Ayşe hanım\n\nrapor bos geliyo, tekrar yükleyebilirmisiniz?\n\nSaygılarımla"
+    fixed = "Merhaba Ayşe Hanım,\n\nRapor boş geliyor, tekrar yükleyebilir misiniz?\n\nSaygılarımla,"
+    # sadece yazım: iyileştirme çağrısı yapılmaz, yazım denetimi düzeltmeleri kabul edilir
+    llm = FakeLLM({"Proofread": [Proofread(subject="", body=fixed, changes=[])]})
+    r = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).fix_text(src, level="yazim", lang="tr")
+    assert r.body == fixed and [c["schema"] for c in llm.calls] == ["Proofread"]
+    # iyileştir: önce iyileştirme, sonra yazım denetimi; ton kartı talimata girer
+    llm = FakeLLM({"Draft": [Draft(subject="", body=fixed, placeholders=[], notes="sadeleştirildi")],
+                   "Proofread": [Proofread(subject="", body=fixed, changes=[])]})
+    r = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).fix_text(src, level="iyilestir", tone="resmi", lang="tr")
+    assert [c["schema"] for c in llm.calls] == ["Draft", "Proofread"]
+    assert 'tone to "Formal"' in llm.calls[0]["system"] and "<text>" in llm.calls[0]["user"]

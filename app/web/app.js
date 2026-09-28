@@ -18,15 +18,17 @@ const DEFAULT_OPTIONS = {
   target: [["claude", "Claude"], ["chatgpt", "ChatGPT"], ["gemini", "Gemini"], ["midjourney", "Midjourney"], ["kodlama_ajani", "Cursor / Claude Code"], ["genel", "Genel"]],
   detail: [["kisa", "Kısa"], ["detayli", "Detaylı"], ["cok_detayli", "Çok detaylı"]],
   plang: [["tr", "TR"], ["en", "EN"]],
+  fixlevel: [["iyilestir", "Dili iyileştir"], ["yazim", "Sadece yazım / noktalama"]],
+  fixtone: [["", "Tonu koru"]],
 };
-const NUMBERED = { mail: "tone", prompt: "task" };
-const GROUPS = { mail: ["tone", "recipient", "length", "lang"], prompt: ["task", "target", "detail", "plang"] };
+const NUMBERED = { mail: "tone", prompt: "task", fix: "fixlevel" };
+const GROUPS = { mail: ["tone", "recipient", "length", "lang"], prompt: ["task", "target", "detail", "plang"], fix: ["fixlevel", "fixtone"] };
 
 const state = {
   step: "mode",
   mode: null,
   options: DEFAULT_OPTIONS,
-  sel: { tone: "normal", recipient: "meslektas", length: "orta", lang: "tr", task: "genel", target: "genel", detail: "detayli", plang: "tr" },
+  sel: { tone: "normal", recipient: "meslektas", length: "orta", lang: "tr", task: "genel", target: "genel", detail: "detayli", plang: "tr", fixlevel: "iyilestir", fixtone: "" },
   captured: "",
   focusGroup: 0,
   answers: {},
@@ -84,6 +86,10 @@ const mock = {
   async prompt_regenerate() { return mock.prompt_finish(); },
   async paste(text) { toast("Yapıştırıldı (önizleme modu)"); return true; },
   async copy(text) { try { await navigator.clipboard.writeText(text); } catch (e) {} return true; },
+  async fix_text(p) {
+    await fakeProgress(p.level === "yazim" ? ["Yazım kontrolü"] : ["Metin iyileştiriliyor", "Yazım kontrolü"]);
+    return { subject: "", body: (p.text || "") + (p.note ? `\n\n(önizleme: "${p.note}" uygulandı)` : ""), warnings: [], notes: p.level === "yazim" ? "2 yazım düzeltmesi" : "Cümleler sadeleştirildi" };
+  },
   async template_fill(p) {
     const t = state.templates.find((x) => x.id === p.id);
     return { subject: `${p.values.surec || ""} - ${t.label}`, body: `${p.values.alici ? "Merhaba " + p.values.alici + "," : "Merhaba,"}\n\n(Önizleme modu: "${t.label}" şablonunun metni burada, alanlarla doldurulmuş olarak görünür.)\n\nTeşekkürler, iyi çalışmalar dilerim.\nSaygılarımla,`, warnings: [] };
@@ -127,7 +133,7 @@ function fitStage() {
 new ResizeObserver(fitStage).observe(stage);
 
 // ---------------------------------------------------------------- adım geçişleri
-const ORDER = { mode: 0, mail: 1, prompt: 1, preview: 2 };
+const ORDER = { mode: 0, mail: 1, prompt: 1, fix: 1, preview: 2 };
 function go(step) {
   const from = $(".panel.active");
   const to = $(`.panel[data-panel="${step}"]`);
@@ -154,12 +160,14 @@ function go(step) {
 }
 
 function renderChrome() {
-  const titles = { mode: "Ne yazalım?", mail: "Mail", prompt: "Prompt", preview: state.mode === "mail" ? "Mail önizleme" : "Prompt önizleme" };
+  const titles = { mode: "Ne yazalım?", mail: "Mail", prompt: "Prompt", fix: "Metni düzelt",
+    preview: state.mode === "mail" ? "Mail önizleme" : state.mode === "fix" ? "Düzeltilmiş metin" : "Prompt önizleme" };
   $("#titleText").textContent = titles[state.step];
-  win.dataset.mode = state.step === "mode" ? "" : state.mode;
+  win.dataset.mode = state.step === "mode" ? "" : state.mode === "fix" ? "mail" : state.mode;
 
   const crumb = $("#crumb");
   if (state.step === "mode") crumb.innerHTML = "PromptGenerator";
+  else if (state.mode === "fix") crumb.innerHTML = `Düzelt › <b>${labelOf("fixlevel", state.sel.fixlevel)}</b> · ${labelOf("fixtone", state.sel.fixtone)}`;
   else if (state.mode === "mail" && state.mailSeg === "tpl") {
     const t = state.templates.find((x) => x.id === state.tpl);
     crumb.innerHTML = `Mail › Şablon › <b>${esc(t ? t.label : "seç")}</b>`;
@@ -175,6 +183,8 @@ function renderChrome() {
 
 // ---------------------------------------------------------------- 1. mod
 function chooseMode(mode) {
+  if (mode === "fix" && !state.captured) { toast("Önce düzeltmek istediğin metni seç, sonra Ctrl+Space"); return; }
+  if (mode === "fix") $("#fixSrc").textContent = state.captured;
   state.mode = mode;
   state.focusGroup = 0;
   go(mode);
@@ -260,6 +270,7 @@ async function generate(extra = {}) {
   if (state.busy) return;
   try { api.save_prefs && api.save_prefs(state.sel); } catch (e) {}
   if (state.mode === "mail" && state.mailSeg === "tpl") return tplRun(!!extra.adapt);
+  if (state.mode === "fix") return fixRun(state.captured, state.sel.fixlevel, state.sel.fixtone, $("#fixNote").value.trim());
   if (state.mode === "mail") {
     const context = $("#mailContext").value.trim();
     if (!context) { shake($("#mailContext").parentElement); return; }
@@ -366,6 +377,14 @@ function showMail(r) {
       (r.score ? pill(`Doğallık ${r.score}/50`) : "") +
       (r.placeholders || []).map((p) => pill(`Doldur: ${p}`, "warn")).join("") +
       (r.notes ? pill(r.notes) : "");
+    if (r.fix) {
+      $("#refine").innerHTML = ["Daha kısa", "Daha resmi", "Daha samimi"].map((t, i) => `<button class="act" data-fixrev="${t}">${t} ${kbd("⇧" + (i + 1))}</button>`).join("") +
+        `<button class="act" data-regen>Baştan ${kbd("Ctrl")}${kbd("R")}</button>` + actionsHtml();
+      bindActions();
+      $$("[data-fixrev]").forEach((b) => b.addEventListener("click", () => fixRefine(b.dataset.fixrev)));
+      fitStage();
+      return;
+    }
     if (r.template) {
       $("#refine").innerHTML = `<button class="act" data-tpladapt>Gemini ile uyarla ${kbd("Ctrl")}${kbd("R")}</button>` + actionsHtml();
       bindActions();
@@ -434,6 +453,7 @@ async function refine(label) {
 
 async function regenerate() {
   if (state.mode === "mail" && state.result && state.result.template) return tplRun(true);
+  if (state.mode === "fix") return generate();
   if (state.mode === "mail") { go("mail"); return generate(); }
   const assumptions = $$("#assumptions span[data-i]").map((s) => s.innerText.trim()).filter(Boolean);
   startBusy();
@@ -455,6 +475,30 @@ function toggleEdit() {
   out.classList.toggle("editing", on);
   if (on) out.focus();
 }
+
+// ---------------------------------------------------------------- seçili metni düzelt
+async function fixRun(text, level, tone, note) {
+  if (state.busy) return;
+  if (!text) { toast("Düzeltilecek metin yok"); return; }
+  try { api.save_prefs && api.save_prefs(state.sel); } catch (e) {}
+  go("preview");
+  startBusy();
+  try {
+    const r = await api.fix_text({ text, level, tone, note });
+    endBusy();
+    showMail({ ...r, fix: true });
+  } catch (e) { endBusy(false); showError(e); }
+}
+function fixRefine(label) {
+  const map = { "Daha kısa": ["", "Anlamı koruyarak daha kısa yap"], "Daha resmi": ["resmi", ""], "Daha samimi": ["samimi", ""] };
+  const [tone, note] = map[label] || ["", label];
+  return fixRun($("#out").innerText.trim(), "iyilestir", tone, note);
+}
+$$("[data-capact]").forEach((b) => b.addEventListener("click", () => {
+  if (b.dataset.capact === "fix") return chooseMode("fix");
+  $("#replyMode").checked = true;
+  chooseMode("mail");
+}));
 
 // ---------------------------------------------------------------- şablonlar
 function setSeg(seg) {
@@ -558,6 +602,8 @@ document.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "m") return chooseMode("mail");
     if (k === "p") return chooseMode("prompt");
+    if (k === "d") return chooseMode("fix");
+    if (k === "y" && state.captured) { $("#replyMode").checked = true; return chooseMode("mail"); }
     const modes = $$(".mode");
     const cur = modes.findIndex((m) => m.classList.contains("kb"));
     if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
@@ -568,7 +614,7 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Enter") return chooseMode(cur === 1 ? "prompt" : "mail");
     return;
   }
-  if (state.step === "mail" || state.step === "prompt") {
+  if (state.step === "mail" || state.step === "prompt" || state.step === "fix") {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       if (state.mode === "mail") return generate({ adapt: e.shiftKey });
@@ -608,6 +654,10 @@ document.addEventListener("keydown", (e) => {
     if (e.key.toLowerCase() === "e") { e.preventDefault(); return toggleEdit(); }
     if (e.key.toLowerCase() === "c" && e.ctrlKey && !String(document.getSelection())) { e.preventDefault(); return copyOut(); }
     if (e.key.toLowerCase() === "r" && e.ctrlKey) { e.preventDefault(); return regenerate(); }
+    if (e.shiftKey && state.mode === "fix" && /^Digit[1-3]$/.test(e.code)) {
+      e.preventDefault();
+      return fixRefine(["Daha kısa", "Daha resmi", "Daha samimi"][+e.code.slice(-1) - 1]);
+    }
     if (e.shiftKey && state.mode === "mail" && /^Digit[1-3]$/.test(e.code)) {
       e.preventDefault();
       return refine(["Daha kısa", "Daha resmi", "Daha samimi"][+e.code.slice(-1) - 1]);
@@ -621,7 +671,8 @@ async function boot(realApi) {
   if (realApi) { api = realApi; document.body.classList.add("native"); }
   else document.body.classList.add("standalone");
   const init = await api.init();
-  state.options = init.options || DEFAULT_OPTIONS;
+  state.options = { ...DEFAULT_OPTIONS, ...(init.options || {}) };
+  state.options.fixtone = [["", "Tonu koru"], ...state.options.tone];
   Object.assign(state.sel, init.defaults || {});
   applyCapture(init.captured || "");
   state.templates = init.templates || MOCK_TEMPLATES;
@@ -640,7 +691,7 @@ window.resetForShow = (captured, mode, hideOnly) => {
   win.classList.remove("closing"); busyFx(false);
   if (hideOnly) return;
   win.style.animation = "none"; void win.offsetWidth; win.style.animation = "";
-  $("#mailContext").value = ""; $("#promptIdea").value = ""; $("#tplNote").value = "";
+  $("#mailContext").value = ""; $("#promptIdea").value = ""; $("#tplNote").value = ""; $("#fixNote").value = "";
   $$("#tplFields [data-f]").forEach((el) => { if (el.type === "checkbox") el.checked = false; else el.value = ""; });
   $("#questions").hidden = true;
   applyCapture(captured || "");

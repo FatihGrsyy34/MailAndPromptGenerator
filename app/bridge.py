@@ -111,6 +111,15 @@ class Api:
     def _warnings(ws):
         return [{"kind": w.kind, "message": w.message, "span": w.span, "hard": w.hard} for w in ws]
 
+    def fix_text(self, p):
+        """Seçili metni düzeltir: level 'yazim' (sadece yazım/noktalama) ya da 'iyilestir'."""
+        mail, _ = self._engine()
+        text = (p.get("text") or self._shell.captured or "").strip()
+        if not text:
+            raise RuntimeError("Düzeltilecek metin yok. Metni seçip Ctrl+Space'e basın.")
+        r = mail.fix_text(text, level=p.get("level", "iyilestir"), tone=p.get("tone", ""), note=p.get("note", ""))
+        return {"subject": "", "body": r.body, "warnings": self._warnings(r.warnings), "notes": r.notes}
+
     def template_fill(self, p):
         """Birebir doldurma: Gemini'ye gitmez, anında döner."""
         from engine.mail.templates import fill, missing_required

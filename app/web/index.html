@@ -42,7 +42,11 @@
         </button>
       </div>
       <div class="capture" id="captureBox" hidden>
-        <div class="glabel">Seçili metin</div>
+        <div class="cap-head">
+          <span class="glabel">Seçili metin</span><span class="spacer"></span>
+          <button class="act" data-capact="reply">Yanıt yaz <kbd>Y</kbd></button>
+          <button class="act primary" data-capact="fix">Düzelt <kbd>D</kbd></button>
+        </div>
         <div class="capture-text" id="captureText"></div>
       </div>
     </section>
@@ -81,6 +85,17 @@
           <button class="act" id="tplAdapt">Gemini ile uyarla <kbd>Ctrl</kbd><kbd>⇧</kbd><kbd>↵</kbd></button>
           <button class="act primary" id="tplFill">Doldur <kbd>Ctrl</kbd><kbd>↵</kbd></button>
         </div>
+      </div>
+    </section>
+
+    <!-- 2c. Seçili metni düzelt -->
+    <section class="panel" data-panel="fix">
+      <div class="glabel">Düzeltilecek metin</div>
+      <div class="capture-text fix-src" id="fixSrc"></div>
+      <div class="group" data-key="fixlevel" data-label="Ne yapılsın?"></div>
+      <div class="group" data-key="fixtone" data-label="Ton"></div>
+      <div class="field spot">
+        <textarea id="fixNote" rows="2" placeholder="Ek istek (opsiyonel): biraz kısalt, daha kibar olsun…"></textarea>
       </div>
     </section>
 
