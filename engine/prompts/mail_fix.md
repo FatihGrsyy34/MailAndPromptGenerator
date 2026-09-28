@@ -10,6 +10,9 @@ What to do:
 {{#if no_tone_card}}
 - Keep the sender's own tone and register.
 {{/if}}
+{{#if recipient_card}}
+- The reader is a {{recipient_label}}: {{recipient_card}}
+{{/if}}
 - Keep roughly the same length unless the note asks otherwise.
 - Plain text only: no bold, headings, emoji or em dashes; avoid semicolons. Do not turn paragraphs into bullet lists or the other way round.
 - Avoid phrases that read as machine-written: {{banned}}

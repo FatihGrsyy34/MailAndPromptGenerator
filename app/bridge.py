@@ -117,7 +117,8 @@ class Api:
         text = (p.get("text") or self._shell.captured or "").strip()
         if not text:
             raise RuntimeError("Düzeltilecek metin yok. Metni seçip Ctrl+Space'e basın.")
-        r = mail.fix_text(text, level=p.get("level", "iyilestir"), tone=p.get("tone", ""), note=p.get("note", ""))
+        r = mail.fix_text(text, level=p.get("level", "iyilestir"), tone=p.get("tone", ""), note=p.get("note", ""),
+                          recipient=p.get("recipient", ""))  # dil metinden otomatik algılanır
         return {"subject": "", "body": r.body, "warnings": self._warnings(r.warnings), "notes": r.notes}
 
     def template_fill(self, p):

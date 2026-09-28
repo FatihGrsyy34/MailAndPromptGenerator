@@ -7,7 +7,10 @@ Windows'ta her yerden **Ctrl+Space** ile açılır: seçenekleri seçip birkaç 
 ## Masaüstü uygulaması
 - Başlatma: `PromptGenerator.cmd` dosyasına çift tıklayın (konsol penceresi açılmaz). Sağ alttaki tepside mor ikon çıkar.
 - Herhangi bir uygulamada **Ctrl+Space**: pencere imlecin yanında açılır. Metin seçiliyse otomatik alınır (seçili bir maile yanıt yazmak için).
-- **Seçili metni düzelt:** Kendi yazdığınız metni seçip Ctrl+Space → `D` (Düzelt): "Dili iyileştir" (anlam ve bilgiler korunur, isteğe bağlı ton) ya da "Sadece yazım / noktalama" (kelimelere dokunmaz). `Enter` ile düzeltilmiş metin seçimin yerine yapıştırılır. Seçili metin gelen bir mailse `Y` (Yanıt yaz).
+- **Seçili metinle çalışma:** Metni seçip Ctrl+Space → `M` ya da `P`; seçili metin kutuya aktarılır.
+  - Mail: "Benim taslağım · düzelt" (varsayılan) seçiliyken ton, alıcı ve "Profesyonelleştir / Sadece yazım-noktalama" seçilip **Düzelt**; seçili metin gelen bir mailse "Gelen mail · yanıtla" ile ne cevap vereceğinizi yazarsınız.
+  - Prompt: seçili metin fikir olarak alınır, konu/hedef/detay seçilip daha detaylı ve profesyonel prompt üretilir.
+  - `Enter` ile sonuç seçimin yerine yapıştırılır.
 - Akış: `M` Mail / `P` Prompt → seçenekler (`1`-`8` ton/konu, ok tuşları) → `Ctrl+Enter` yaz → `Enter` yapıştır. `Esc` geri/kapat, `E` düzenle, `Shift+1/2/3` daha kısa/resmi/samimi, `Ctrl+R` yeniden.
 - Kısayol başka bir uygulamada kullanılıyorsa sırayla `Ctrl+Shift+Space`, `Ctrl+Alt+Space` denenir; `config.toml` → `[hotkey]` ile değiştirilebilir.
 - **Windows açılışında otomatik başlar** (tepsi menüsünden kapatılabilir: "Windows açılışında başlat"). Tepsi menüsü: Aç, Windows açılışında başlat, Ayarlar klasörünü aç, Çıkış.

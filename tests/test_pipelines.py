@@ -196,3 +196,11 @@ def test_fix_text_levels(tmp_path):
     r = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).fix_text(src, level="iyilestir", tone="resmi", lang="tr")
     assert [c["schema"] for c in llm.calls] == ["Draft", "Proofread"]
     assert 'tone to "Formal"' in llm.calls[0]["system"] and "<text>" in llm.calls[0]["user"]
+
+
+def test_fix_text_uses_recipient(tmp_path):
+    fixed = "Merhaba Ayşe Hanım,\n\nRapor hazır.\n\nSaygılarımla,"
+    llm = FakeLLM({"Draft": [Draft(subject="", body=fixed, placeholders=[], notes="")],
+                   "Proofread": [Proofread(subject="", body=fixed, changes=[])]})
+    MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).fix_text("rapor hazir", tone="kibar", recipient="ust_yonetici", lang="tr")
+    assert "The reader is a Senior manager" in llm.calls[0]["system"]

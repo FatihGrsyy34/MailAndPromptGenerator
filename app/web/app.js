@@ -18,11 +18,14 @@ const DEFAULT_OPTIONS = {
   target: [["claude", "Claude"], ["chatgpt", "ChatGPT"], ["gemini", "Gemini"], ["midjourney", "Midjourney"], ["kodlama_ajani", "Cursor / Claude Code"], ["genel", "Genel"]],
   detail: [["kisa", "Kısa"], ["detayli", "Detaylı"], ["cok_detayli", "Çok detaylı"]],
   plang: [["tr", "TR"], ["en", "EN"]],
-  fixlevel: [["iyilestir", "Dili iyileştir"], ["yazim", "Sadece yazım / noktalama"]],
+  fixlevel: [["iyilestir", "Profesyonelleştir"], ["yazim", "Sadece yazım / noktalama"]],
   fixtone: [["", "Tonu koru"]],
 };
 const NUMBERED = { mail: "tone", prompt: "task", fix: "fixlevel" };
-const GROUPS = { mail: ["tone", "recipient", "length", "lang"], prompt: ["task", "target", "detail", "plang"], fix: ["fixlevel", "fixtone"] };
+const GROUPS = { mail: ["tone", "recipient", "length", "lang"], prompt: ["task", "target", "detail", "plang"] };
+// Seçili metin "benim taslağım" ise mailde uzunluk yerine "ne yapılsın" grubu görünür
+const groupsFor = (mode) => (mode === "mail" && isDraft() ? ["fixlevel", "tone", "recipient", "lang"] : GROUPS[mode]);
+const isDraft = () => !!state.captured && state.capRole === "draft" && state.mailSeg !== "tpl";
 
 const state = {
   step: "mode",
@@ -35,6 +38,7 @@ const state = {
   result: null,
   busy: false,
   mailSeg: "free",   // "free" | "tpl"
+  capRole: "draft",  // seçili metin: "draft" (benim taslağım, düzelt) | "reply" (gelen mail, yanıtla)
   templates: [],
   tpl: null,         // seçili şablon id
   lastTpl: null,     // son doldurulan şablon (uyarlama için)
@@ -160,14 +164,14 @@ function go(step) {
 }
 
 function renderChrome() {
-  const titles = { mode: "Ne yazalım?", mail: "Mail", prompt: "Prompt", fix: "Metni düzelt",
-    preview: state.mode === "mail" ? "Mail önizleme" : state.mode === "fix" ? "Düzeltilmiş metin" : "Prompt önizleme" };
+  const titles = { mode: "Ne yazalım?", mail: isDraft() ? "Maili düzelt" : "Mail", prompt: state.captured ? "Prompt'u geliştir" : "Prompt",
+    preview: state.mode === "mail" ? (state.result && state.result.fix ? "Düzeltilmiş mail" : "Mail önizleme") : "Prompt önizleme" };
   $("#titleText").textContent = titles[state.step];
   win.dataset.mode = state.step === "mode" ? "" : state.mode === "fix" ? "mail" : state.mode;
 
   const crumb = $("#crumb");
   if (state.step === "mode") crumb.innerHTML = "PromptGenerator";
-  else if (state.mode === "fix") crumb.innerHTML = `Düzelt › <b>${labelOf("fixlevel", state.sel.fixlevel)}</b> · ${labelOf("fixtone", state.sel.fixtone)}`;
+  else if (state.mode === "mail" && isDraft()) crumb.innerHTML = `Mail › Taslağı düzelt › <b>${labelOf("fixlevel", state.sel.fixlevel)}</b> · ${labelOf("tone", state.sel.tone)} · ${labelOf("recipient", state.sel.recipient)}`;
   else if (state.mode === "mail" && state.mailSeg === "tpl") {
     const t = state.templates.find((x) => x.id === state.tpl);
     crumb.innerHTML = `Mail › Şablon › <b>${esc(t ? t.label : "seç")}</b>`;
@@ -178,17 +182,35 @@ function renderChrome() {
   if (state.step === "mode") h.innerHTML = `<span class="h">Mail ${kbd("M")}</span><span class="h">Prompt ${kbd("P")}</span><span class="sep"></span><span class="h main">Seç ${kbd("↵")}</span>`;
   else if (state.step === "preview") h.innerHTML = `<span class="h">Düzenle ${kbd("E")}</span><span class="h">Kopyala ${kbd("Ctrl")}${kbd("C")}</span><span class="sep"></span><span class="h main">Yapıştır ${kbd("↵")}</span>`;
   else if (state.mode === "mail" && state.mailSeg === "tpl") h.innerHTML = `<span class="h">Şablon ${kbd("1")}–${kbd("9")}</span><span class="h">Uyarla ${kbd("Ctrl")}${kbd("⇧")}${kbd("↵")}</span><span class="sep"></span><span class="h main">Doldur ${kbd("Ctrl")}${kbd("↵")}</span>`;
-  else h.innerHTML = `<span class="h">Seçenek ${kbd("↑")}${kbd("↓")}${kbd("←")}${kbd("→")}</span><span class="sep"></span><span class="h main">Yaz ${kbd("Ctrl")}${kbd("↵")}</span>`;
+  else h.innerHTML = `<span class="h">Seçenek ${kbd("↑")}${kbd("↓")}${kbd("←")}${kbd("→")}</span><span class="sep"></span><span class="h main">${state.mode === "mail" && isDraft() ? "Düzelt" : "Yaz"} ${kbd("Ctrl")}${kbd("↵")}</span>`;
 }
 
 // ---------------------------------------------------------------- 1. mod
 function chooseMode(mode) {
-  if (mode === "fix" && !state.captured) { toast("Önce düzeltmek istediğin metni seç, sonra Ctrl+Space"); return; }
-  if (mode === "fix") $("#fixSrc").textContent = state.captured;
   state.mode = mode;
   state.focusGroup = 0;
+  if (mode === "mail" && state.captured) { setSeg("free"); setRole(state.capRole); }
+  if (mode === "prompt" && state.captured && !$("#promptIdea").value.trim()) $("#promptIdea").value = state.captured;
   go(mode);
 }
+
+// Seçili metnin rolü: kendi taslağım (düzelt) ya da gelen mail (yanıtla)
+function setRole(role) {
+  state.capRole = role;
+  $$("#capRole .seg-btn").forEach((b) => b.classList.toggle("on", b.dataset.role === role));
+  const on = $(`#capRole .seg-btn[data-role="${role}"]`), hl = $("#capRole .seg-hl");
+  if (on && on.offsetWidth) { hl.style.width = on.offsetWidth + "px"; hl.style.transform = `translateX(${on.offsetLeft - 3}px)`; }
+  const draft = role === "draft";
+  $('.group[data-key="fixlevel"]').hidden = !draft;
+  $('.group[data-key="length"]').hidden = draft;
+  const ta = $("#mailContext");
+  if (draft && (!ta.value.trim() || ta.dataset.auto === "reply")) { ta.value = state.captured; ta.dataset.auto = "draft"; }
+  if (!draft && ta.dataset.auto === "draft" && ta.value === state.captured) { ta.value = ""; ta.dataset.auto = "reply"; }
+  ta.placeholder = draft ? "Seçtiğin metin burada, istersen düzenle" : "Ne cevap vermek istiyorsun? Örn: salı uygun, Burak da katılacak, linki ben atarım";
+  renderChrome();
+  requestAnimationFrame(() => { layoutAllHL(true); fitStage(); if (on && on.offsetWidth) { hl.style.width = on.offsetWidth + "px"; hl.style.transform = `translateX(${on.offsetLeft - 3}px)`; } });
+}
+$$("#capRole .seg-btn").forEach((b) => b.addEventListener("click", () => setRole(b.dataset.role)));
 $$(".mode").forEach((b) => b.addEventListener("click", () => chooseMode(b.dataset.mode)));
 
 // ---------------------------------------------------------------- çip grupları
@@ -233,7 +255,7 @@ function moveSel(key, delta) {
   select(key, opts[(i + delta + opts.length) % opts.length][0]);
 }
 function setFocusGroup(i) {
-  const keys = GROUPS[state.mode];
+  const keys = groupsFor(state.mode);
   state.focusGroup = (i + keys.length) % keys.length;
   $$(".group").forEach((g) => g.classList.toggle("focus", g.dataset.key === keys[state.focusGroup]));
 }
@@ -270,7 +292,11 @@ async function generate(extra = {}) {
   if (state.busy) return;
   try { api.save_prefs && api.save_prefs(state.sel); } catch (e) {}
   if (state.mode === "mail" && state.mailSeg === "tpl") return tplRun(!!extra.adapt);
-  if (state.mode === "fix") return fixRun(state.captured, state.sel.fixlevel, state.sel.fixtone, $("#fixNote").value.trim());
+  if (state.mode === "mail" && isDraft()) {
+    const text = $("#mailContext").value.trim();
+    if (!text) { shake($("#mailContext").parentElement); return; }
+    return fixRun(text, state.sel.fixlevel, state.sel.tone, "");
+  }
   if (state.mode === "mail") {
     const context = $("#mailContext").value.trim();
     if (!context) { shake($("#mailContext").parentElement); return; }
@@ -279,7 +305,7 @@ async function generate(extra = {}) {
     try {
       const r = await api.generate_mail({
         context, tone: state.sel.tone, recipient: state.sel.recipient, length: state.sel.length, lang: state.sel.lang,
-        reply: !!(state.captured && $("#replyMode").checked), thread: state.captured && $("#replyMode").checked ? state.captured : "",
+        reply: !!(state.captured && state.capRole === "reply"), thread: state.captured && state.capRole === "reply" ? state.captured : "",
         ...extra,
       });
       endBusy();
@@ -367,6 +393,7 @@ function pill(text, kind = "") { return `<span class="pill ${kind}">${esc(text)}
 
 function showMail(r) {
   state.result = r;
+  renderChrome();  // başlık sonuca göre ("Düzeltilmiş mail" vb.)
   const subj = $("#subject");
   if (r.subject) { subj.hidden = false; subj.innerHTML = `Konu: <b>${esc(r.subject)}</b>`; }
   $("#out").classList.remove("mono");
@@ -453,7 +480,7 @@ async function refine(label) {
 
 async function regenerate() {
   if (state.mode === "mail" && state.result && state.result.template) return tplRun(true);
-  if (state.mode === "fix") return generate();
+  if (state.result && state.result.fix) { go("mail"); return generate(); }
   if (state.mode === "mail") { go("mail"); return generate(); }
   const assumptions = $$("#assumptions span[data-i]").map((s) => s.innerText.trim()).filter(Boolean);
   startBusy();
@@ -484,21 +511,16 @@ async function fixRun(text, level, tone, note) {
   go("preview");
   startBusy();
   try {
-    const r = await api.fix_text({ text, level, tone, note });
+    const r = await api.fix_text({ text, level, tone, note, recipient: state.sel.recipient, lang: state.sel.lang });
     endBusy();
     showMail({ ...r, fix: true });
   } catch (e) { endBusy(false); showError(e); }
 }
 function fixRefine(label) {
-  const map = { "Daha kısa": ["", "Anlamı koruyarak daha kısa yap"], "Daha resmi": ["resmi", ""], "Daha samimi": ["samimi", ""] };
-  const [tone, note] = map[label] || ["", label];
+  const map = { "Daha kısa": [state.sel.tone, "Anlamı koruyarak daha kısa yap"], "Daha resmi": ["resmi", ""], "Daha samimi": ["samimi", ""] };
+  const [tone, note] = map[label] || [state.sel.tone, label];
   return fixRun($("#out").innerText.trim(), "iyilestir", tone, note);
 }
-$$("[data-capact]").forEach((b) => b.addEventListener("click", () => {
-  if (b.dataset.capact === "fix") return chooseMode("fix");
-  $("#replyMode").checked = true;
-  chooseMode("mail");
-}));
 
 // ---------------------------------------------------------------- şablonlar
 function setSeg(seg) {
@@ -602,8 +624,6 @@ document.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (k === "m") return chooseMode("mail");
     if (k === "p") return chooseMode("prompt");
-    if (k === "d") return chooseMode("fix");
-    if (k === "y" && state.captured) { $("#replyMode").checked = true; return chooseMode("mail"); }
     const modes = $$(".mode");
     const cur = modes.findIndex((m) => m.classList.contains("kb"));
     if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
@@ -629,11 +649,11 @@ document.addEventListener("keydown", (e) => {
       return;
     }
     if (typing && e.target.tagName === "TEXTAREA" && e.altKey === false) {
-      if ((e.key === "ArrowUp" && e.target.selectionStart === 0) ) { e.preventDefault(); e.target.blur(); setFocusGroup(GROUPS[state.mode].length - 1); }
+      if ((e.key === "ArrowUp" && e.target.selectionStart === 0) ) { e.preventDefault(); e.target.blur(); setFocusGroup(groupsFor(state.mode).length - 1); }
       return;
     }
     if (typing) return;
-    const keys = GROUPS[state.mode];
+    const keys = groupsFor(state.mode);
     if (e.key === "ArrowDown") { e.preventDefault(); if (state.focusGroup === keys.length - 1) { $$(".group").forEach((g) => g.classList.remove("focus")); return $(".panel.active textarea").focus(); } return setFocusGroup(state.focusGroup + 1); }
     if (e.key === "ArrowUp") { e.preventDefault(); return setFocusGroup(state.focusGroup - 1); }
     if (e.key === "ArrowRight") { e.preventDefault(); setFocusGroup(state.focusGroup); return moveSel(keys[state.focusGroup], 1); }
@@ -654,7 +674,7 @@ document.addEventListener("keydown", (e) => {
     if (e.key.toLowerCase() === "e") { e.preventDefault(); return toggleEdit(); }
     if (e.key.toLowerCase() === "c" && e.ctrlKey && !String(document.getSelection())) { e.preventDefault(); return copyOut(); }
     if (e.key.toLowerCase() === "r" && e.ctrlKey) { e.preventDefault(); return regenerate(); }
-    if (e.shiftKey && state.mode === "fix" && /^Digit[1-3]$/.test(e.code)) {
+    if (e.shiftKey && state.result && state.result.fix && /^Digit[1-3]$/.test(e.code)) {
       e.preventDefault();
       return fixRefine(["Daha kısa", "Daha resmi", "Daha samimi"][+e.code.slice(-1) - 1]);
     }
@@ -672,7 +692,7 @@ async function boot(realApi) {
   else document.body.classList.add("standalone");
   const init = await api.init();
   state.options = { ...DEFAULT_OPTIONS, ...(init.options || {}) };
-  state.options.fixtone = [["", "Tonu koru"], ...state.options.tone];
+
   Object.assign(state.sel, init.defaults || {});
   applyCapture(init.captured || "");
   state.templates = init.templates || MOCK_TEMPLATES;
@@ -684,14 +704,16 @@ function applyCapture(text) {
   state.captured = text;
   $("#captureBox").hidden = !text;
   $("#captureText").textContent = text;
-  $("#replyToggle").hidden = !text;
+  $("#capRole").hidden = !text;
+  if (!text) { $('.group[data-key="fixlevel"]').hidden = true; $('.group[data-key="length"]').hidden = false; }
 }
 // Python her kısayolda pencereyi göstermeden önce bunu çağırır: yeni seçim + ilk ekrana dönüş
 window.resetForShow = (captured, mode, hideOnly) => {
   win.classList.remove("closing"); busyFx(false);
   if (hideOnly) return;
   win.style.animation = "none"; void win.offsetWidth; win.style.animation = "";
-  $("#mailContext").value = ""; $("#promptIdea").value = ""; $("#tplNote").value = ""; $("#fixNote").value = "";
+  $("#mailContext").value = ""; $("#mailContext").dataset.auto = ""; $("#promptIdea").value = ""; $("#tplNote").value = "";
+  state.capRole = "draft"; state.result = null;
   $$("#tplFields [data-f]").forEach((el) => { if (el.type === "checkbox") el.checked = false; else el.value = ""; });
   $("#questions").hidden = true;
   applyCapture(captured || "");
@@ -706,7 +728,13 @@ window.onShown = () => {
   window.focus(); document.body.focus();
 };
 // Seçili metin pencere açıldıktan sonra gelir
-window.setCaptured = (text) => { applyCapture(text || ""); fitStage(); };
+window.setCaptured = (text) => {
+  applyCapture(text || "");
+  // kullanıcı metin gelmeden Mail/Prompt'a geçtiyse kutuyu şimdi doldur
+  if (text && state.step === "mail") setRole(state.capRole);
+  if (text && state.step === "prompt" && !$("#promptIdea").value.trim()) $("#promptIdea").value = text;
+  renderChrome(); fitStage();
+};
 
 // Pencereyi sürükle: üst/alt çubuğa (buton dışında) basılınca taşımayı Windows'a devret
 document.addEventListener("pointerdown", (e) => {

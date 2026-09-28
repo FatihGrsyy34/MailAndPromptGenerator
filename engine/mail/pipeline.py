@@ -274,7 +274,8 @@ class MailPipeline:
         return (result.subject if subject else subject), new_body
 
     # ---- seçili metni düzeltme ----
-    def fix_text(self, text: str, level: str = "iyilestir", tone: str = "", note: str = "", lang: str = "") -> MailResult:
+    def fix_text(self, text: str, level: str = "iyilestir", tone: str = "", note: str = "", lang: str = "",
+                 recipient: str = "") -> MailResult:
         """Kullanıcının kendi yazdığı metni düzeltir.
         level="yazim": sadece yazım/noktalama (kelimelere dokunmaz); "iyilestir": dili akıcı ve profesyonel yapar."""
         from .style_profile import detect_lang
@@ -287,11 +288,13 @@ class MailPipeline:
             self.on_step("Metin iyileştiriliyor")
             t = time.perf_counter()
             tone_data = self.data["tones"].get(tone) if tone else None
+            rec = self.data["recipients"].get(recipient) if recipient else None
             system = render(
                 load_prompt("mail_fix"), sender=self._sender(), language_name=LANG_NAMES[lang],
                 lang_tr=lang == "tr", tone_label=tone_data["label_en"] if tone_data else "",
                 tone_card=tone_data["card"].strip() if tone_data else "", no_tone_card=not tone_data,
                 banned=banned_phrase_list(lang, limit=40), style_profile=self.style.profile_text(),
+                recipient_label=rec["label_en"] if rec else "", recipient_card=rec["card"].strip() if rec else "",
             )
             user = f"<text>\n{body}\n</text>\n\n<note>\n{note.strip()}\n</note>"
             d = self.llm.generate(tier="quality", system=system, user=user, schema=Draft)

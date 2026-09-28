@@ -175,7 +175,8 @@ body.native .top button, body.native .bar button { cursor: pointer; }
 .mode[data-mode="prompt"].spot::before { background: radial-gradient(240px circle at var(--mx) var(--my), rgba(167, 139, 250, 0.15), transparent 60%); }
 
 .capture { margin-top: 12px; }
-.cap-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.cap-hint { font-weight: 400; color: var(--t4); }
+#capRole { margin-bottom: 12px; }
 .cap-head .glabel { margin: 0 2px; }
 .cap-head .act { height: 26px; font-size: 12px; }
 .fix-src { margin-bottom: 12px; max-height: 76px; }
