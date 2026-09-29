@@ -73,6 +73,10 @@ class Shell:
             self._enable_native_drag()
             # Başka pencereye geçince gizlenmez; sadece "her zaman üstte" kalkar ki diğer pencerelerin arkasına geçsin
             self.window.native.Deactivate += lambda sender, args: self._on_deactivate()
+            try:
+                self.window.native.DpiChanged += lambda sender, args: self._on_dpi_changed()
+            except Exception as e:  # eski .NET: JS tarafındaki ölçek dinleyicisi yine düzeltir
+                log("dpi hook", e)
         except Exception as e:
             log("style error", e)
         if self.visible is False:
@@ -109,6 +113,14 @@ class Shell:
             winapi.begin_native_drag(self.hwnd)
 
         self.window.native.BeginInvoke(Action(run))
+        # Windows'un taşıma döngüsü bir sebeple başlamazsa (dokunmatik yüzey, farklı ekran sürücüsü vb.)
+        # sol tuş basılı kaldıkça pencereyi imlece biz taşıyoruz: her durumda sürüklenebilsin
+        time.sleep(0.12)
+        if not winapi.in_move_loop(self.hwnd) and winapi.left_button_down():
+            winapi.follow_mouse(self.hwnd)
+        while winapi.in_move_loop(self.hwnd) or winapi.left_button_down():
+            time.sleep(0.03)
+        self._refit()  # bırakıldığı ekranın ölçeğine göre boyutlandır, ekran dışına taştıysa içeri al
 
     def _on_deactivate(self) -> None:
         # Alt+Tab ya da başka pencereye tıklama: pencere kapanmaz, yazılanlar kaybolmaz; sadece öne çıkmayı bırakır.
@@ -163,12 +175,19 @@ class Shell:
             log("js error", e)
 
     def resize(self, height: int) -> None:
-        height = max(160, min(height, 900))
-        if abs(height - self.height) < 2:
-            return
-        self.height = height
+        self.height = max(160, min(height, 900))
+        self._refit()
+
+    def _refit(self) -> None:
+        """Boyutu, pencerenin şu an bulunduğu ekranın ölçeğine göre yeniden uygular ve ekrana sığdırır.
+        İçerik değişince, açılışta ve başka monitöre sürüklenince çağrılır."""
         if self.hwnd:
-            winapi.resize_window(self.hwnd, WIDTH, height)  # pywebview resize gizli pencereyi gösteriyor
+            winapi.fit_window(self.hwnd, WIDTH, self.height)
+
+    def _on_dpi_changed(self) -> None:
+        # Pencere ölçeği farklı bir monitöre geçti: yazılar büyüdü/küçüldü, pencere de ona göre boyutlansın
+        if not winapi.left_button_down():
+            threading.Timer(0.05, self._refit).start()
 
     def hide(self, restore_focus: bool) -> None:
         log("hide", "restore" if restore_focus else "")
@@ -183,15 +202,18 @@ class Shell:
     def show_at_caret(self) -> None:
         """Pencereyi imlecin yanında gösterir. JS beklenmez: odak ve açılış animasyonu sonradan tetiklenir."""
         x, y = winapi.anchor_point(self.prev_hwnd)
-        scale = winapi.scale_for(x, y)
-        px, py = winapi.place_near(x, y, int(WIDTH * scale), int(max(self.height, 420) * scale))
+        scale = winapi.scale_for(x, y)  # imlecin olduğu ekranın ölçeği (%100, %125, %150…)
+        w, h = int(WIDTH * scale), int(self.height * scale)
+        px, py = winapi.place_near(x, y, w, int(max(self.height, 420) * scale))
         self.shown_at = time.time()
         self.visible = True
         self._set_topmost(True)
-        self.window.move(int(px / scale), int(py / scale))
+        if self.hwnd:
+            winapi.set_bounds(self.hwnd, px, py, w, h)  # fiziksel pikselle, hedef ekranın ölçeğiyle
         self.window.show()
         if self.hwnd:
             winapi.force_foreground(self.hwnd)
+            self._refit()  # başka ölçekli ekrandan geldiyse boyutu yeni ekrana göre düzelt
 
     # ---------- kısayol ----------
     def on_hotkey(self) -> None:

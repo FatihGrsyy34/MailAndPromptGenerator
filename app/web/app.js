@@ -135,6 +135,12 @@ function fitStage() {
   }
 }
 new ResizeObserver(fitStage).observe(stage);
+// Pencere ölçeği farklı bir monitöre geçince (ör. %100 → %150) boyutu yeniden bildir
+(function watchScale() {
+  matchMedia(`(resolution: ${devicePixelRatio}dppx)`).addEventListener("change", () => {
+    lastReported = 0; fitStage(); watchScale();
+  }, { once: true });
+})();
 
 // ---------------------------------------------------------------- adım geçişleri
 const ORDER = { mode: 0, mail: 1, prompt: 1, fix: 1, preview: 2 };

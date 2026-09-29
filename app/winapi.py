@@ -328,11 +328,35 @@ def window_scale(hwnd: int) -> float:
         return 1.0
 
 
+def window_rect(hwnd: int) -> tuple[int, int, int, int]:
+    r = wintypes.RECT()
+    u32.GetWindowRect(wintypes.HWND(hwnd), ctypes.byref(r))
+    return r.left, r.top, r.right, r.bottom
+
+
+def set_bounds(hwnd: int, x: int, y: int, w: int, h: int) -> None:
+    """Konum ve boyutu fiziksel pikselle tek seferde verir; pencereyi göstermez, odağı çalmaz.
+    (pywebview'in move/resize'ı koordinatı pencerenin o anki ekranının ölçeğiyle çarpıyor; ölçeği farklı
+    monitörler arasında pencere yanlış yere/yanlış boyutta düşüyordu.)"""
+    u32.SetWindowPos(wintypes.HWND(hwnd), None, int(x), int(y), int(w), int(h), SWP_NOZORDER | SWP_NOACTIVATE)
+
+
+def fit_window(hwnd: int, width: int, height: int) -> None:
+    """Pencereyi bulunduğu ekranın ölçeğine göre (mantıksal px → fiziksel) boyutlandırır ve ekrana sığdırır:
+    alta taşarsa yukarı, yana taşarsa içeri kaydırır. Her ölçek/çözünürlükte aynı davranır."""
+    s = window_scale(hwnd)
+    w, h = int(width * s), int(height * s)
+    left, top, _, _ = window_rect(hwnd)
+    wl, wt, wr, wb = work_area(left + w // 2, top + 10)
+    h = min(h, wb - wt - 16)
+    x = min(max(wl + 8, left), wr - w - 8)
+    y = min(max(wt + 8, top), wb - h - 8)
+    set_bounds(hwnd, x, y, w, h)
+
+
 def resize_window(hwnd: int, width: int, height: int) -> None:
     """Pencereyi GÖSTERMEDEN boyutlandırır (pywebview'in resize'ı SWP_SHOWWINDOW kullanıp gizli pencereyi açıyor)."""
-    s = window_scale(hwnd)
-    u32.SetWindowPos(wintypes.HWND(hwnd), None, 0, 0, int(width * s), int(height * s),
-                     SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE)
+    fit_window(hwnd, width, height)
 
 
 def hide_from_taskbar(hwnd: int) -> None:
@@ -350,6 +374,31 @@ def begin_native_drag(hwnd: int) -> None:
     u32.ReleaseCapture()
     lparam = (pt.y & 0xFFFF) << 16 | (pt.x & 0xFFFF)
     u32.PostMessageW(wintypes.HWND(hwnd), 0x00A1, 2, lparam)  # WM_NCLBUTTONDOWN, HTCAPTION
+
+
+def in_move_loop(hwnd: int) -> bool:
+    gti = _GTI(cbSize=ctypes.sizeof(_GTI))
+    tid = u32.GetWindowThreadProcessId(wintypes.HWND(hwnd), None)
+    return bool(tid and u32.GetGUIThreadInfo(tid, ctypes.byref(gti)) and gti.flags & 0x2)  # GUI_INMOVESIZE
+
+
+def left_button_down() -> bool:
+    return bool(u32.GetAsyncKeyState(0x01) & 0x8000)
+
+
+def follow_mouse(hwnd: int) -> None:
+    """Yedek sürükleme: Windows'un taşıma döngüsü başlamadıysa, sol tuş bırakılana kadar pencereyi imleçle taşır."""
+    pt = wintypes.POINT()
+    u32.GetCursorPos(ctypes.byref(pt))
+    left, top, _, _ = window_rect(hwnd)
+    dx, dy = pt.x - left, pt.y - top
+    last = (pt.x, pt.y)
+    while left_button_down():
+        u32.GetCursorPos(ctypes.byref(pt))
+        if (pt.x, pt.y) != last:
+            last = (pt.x, pt.y)
+            u32.SetWindowPos(wintypes.HWND(hwnd), None, pt.x - dx, pt.y - dy, 0, 0, 0x1 | SWP_NOZORDER | SWP_NOACTIVATE)
+        time.sleep(0.008)
 
 
 def trim_memory() -> None:
