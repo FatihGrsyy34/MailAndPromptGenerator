@@ -59,6 +59,31 @@ def single_instance(name: str = "PromptGenerator.SingleInstance") -> bool:
     return ctypes.get_last_error() != 183  # ERROR_ALREADY_EXISTS
 
 
+SHOW_EVENT = "Local\\MailPromptAsistan.Show"
+k32.CreateEventW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.BOOL, wintypes.LPCWSTR]
+k32.CreateEventW.restype = wintypes.HANDLE
+k32.SetEvent.argtypes = [wintypes.HANDLE]
+k32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+k32.WaitForSingleObject.restype = wintypes.DWORD
+
+
+def signal_running_instance() -> bool:
+    """İkinci kez başlatılınca çalışan kopyaya 'pencereni aç' der (yeni kopya açılmaz)."""
+    h = k32.CreateEventW(None, False, False, SHOW_EVENT)
+    return bool(h and k32.SetEvent(h))
+
+
+def wait_show_signals(callback) -> None:
+    """Çalışan kopyada: ikinci başlatma sinyali geldikçe callback çağrılır. Kendi thread'inde çalışır."""
+    h = k32.CreateEventW(None, False, False, SHOW_EVENT)  # otomatik sıfırlanan olay
+    while h:
+        if k32.WaitForSingleObject(h, 0xFFFFFFFF) == 0:
+            try:
+                callback()
+            except Exception:
+                pass
+
+
 # ---------- kısayol ----------
 def parse_hotkey(combo: str) -> tuple[int, int]:
     mods, vk = MOD_NOREPEAT, None

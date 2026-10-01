@@ -31,13 +31,25 @@ TRIM_AFTER = 30.0  # saniye: gizlendikten bu kadar sonra boştaki belleği Windo
 LOG = ROOT / "user_data" / "app.log"
 
 
+_logger = None
+
+
 def log(*parts) -> None:
+    """Dönen log: app.log 1 MB'ı geçince app.log.1…3 olarak saklanır, en eskisi silinir."""
+    global _logger
     try:
-        LOG.parent.mkdir(parents=True, exist_ok=True)
-        if LOG.exists() and LOG.stat().st_size > 1_000_000:  # 1 MB'ı geçerse baştan başla
-            LOG.write_text("", encoding="utf-8")
-        with open(LOG, "a", encoding="utf-8") as f:
-            f.write(time.strftime("%H:%M:%S ") + " ".join(str(p) for p in parts) + "\n")
+        if _logger is None:
+            import logging
+            from logging.handlers import RotatingFileHandler
+
+            LOG.parent.mkdir(parents=True, exist_ok=True)
+            handler = RotatingFileHandler(LOG, maxBytes=1_000_000, backupCount=3, encoding="utf-8", delay=True)
+            handler.setFormatter(logging.Formatter("%(asctime)s %(message)s", "%Y-%m-%d %H:%M:%S"))
+            _logger = logging.getLogger("mailprompt")
+            _logger.setLevel(logging.INFO)
+            _logger.propagate = False
+            _logger.addHandler(handler)
+        _logger.info(" ".join(str(p) for p in parts))
     except Exception:
         pass
 
@@ -254,6 +266,20 @@ class Shell:
         log(f"hotkey captured={len(self.captured)} copy_send={1000*(t1-t0):.0f}ms visible={1000*(t2-t0):.0f}ms "
             f"ui_ready={1000*(t3-t0):.0f}ms capture_done={1000*(time.perf_counter()-t0):.0f}ms")
 
+    def open_window(self) -> None:
+        """Tepsiden 'Aç' ya da uygulama ikinci kez başlatılınca: pencereyi seçim almadan açar (açıksa öne getirir)."""
+        if not self.ready.is_set():
+            return
+        if self.visible:
+            self._set_topmost(True)
+            winapi.force_foreground(self.hwnd)
+            return
+        self.prev_hwnd = winapi.foreground()
+        self.captured = ""
+        self._webview_idle(False)
+        self.show_at_caret()
+        self.js("window.onShown && window.onShown()")
+
     # ---------- tepsi ----------
     def tray(self) -> None:
         try:
@@ -268,11 +294,11 @@ class Shell:
                 d.rounded_rectangle((4, 4, 60, 60), radius=16, fill=(113, 112, 255, 255))
 
             def open_(icon, item):
-                self.prev_hwnd = winapi.foreground()
-                self.captured = ""
-                self._webview_idle(False)
-                self.show_at_caret()
-                self.js("window.onShown && window.onShown()")
+                self.open_window()
+
+            def open_log(icon, item):
+                if LOG.exists():
+                    os.startfile(str(LOG))
 
             def quit_(icon, item):
                 icon.stop()
@@ -288,16 +314,39 @@ class Shell:
             def open_folder(icon, item):
                 os.startfile(str(ROOT))
 
+            def status(item):
+                if not self.hotkeys.active_combo:
+                    return "Kısayol kaydedilemedi (Log'a bakın)"
+                return f"Çalışıyor · {self.hotkeys.active_combo} · {time.strftime('%H:%M', time.localtime(STARTED))}'den beri"
+
             menu = pystray.Menu(
+                pystray.MenuItem(status, lambda icon, item: None, enabled=False),
                 pystray.MenuItem(lambda item: f"Aç ({self.hotkey_label})", open_, default=True),
                 pystray.MenuItem("Windows açılışında başlat", toggle_autostart, checked=lambda item: autostart.is_enabled()),
                 pystray.MenuItem("Ayarlar klasörünü aç", open_folder),
+                pystray.MenuItem("Log'u aç", open_log),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem("Çıkış", quit_),
             )
-            pystray.Icon("MailPromptAsistan", img, APP_NAME, menu).run_detached()
+            icon = pystray.Icon("MailPromptAsistan", img, APP_NAME, menu)
+            icon.run_detached()
+            threading.Thread(target=self._first_run_hint, args=(icon,), daemon=True).start()
         except Exception as e:
             log("tray error", e)
+
+    @staticmethod
+    def _first_run_hint(icon) -> None:
+        """Windows 11 yeni tepsi simgelerini '^' alanına gizler; ilk açılışta bir kez nasıl sabitleneceğini söyle."""
+        flag = LOG.parent / ".tray_hint_shown"
+        if flag.exists():
+            return
+        try:
+            time.sleep(1.0)
+            icon.notify("Ctrl+Space ile açılır. Simgeyi görev çubuğunda sabitlemek için: Ayarlar > Kişiselleştirme > "
+                        "Görev çubuğu > Diğer sistem tepsisi simgeleri.", APP_NAME)
+            flag.write_text("1", encoding="utf-8")
+        except Exception as e:
+            log("tray hint", e)
 
     # ---------- başlangıç ----------
     def background(self) -> None:
@@ -310,6 +359,7 @@ class Shell:
                 log("hotkey error", e)
 
         threading.Thread(target=run_hotkeys, daemon=True).start()
+        threading.Thread(target=winapi.wait_show_signals, args=(self.open_window,), daemon=True).start()
         time.sleep(0.3)
         if self.hotkeys.active_combo:
             self.hotkey_label = self.hotkeys.active_combo
@@ -347,7 +397,9 @@ def main() -> None:
     winapi.set_dpi_aware()
     winapi.set_app_id(APP_ID)
     if not winapi.single_instance():
-        print("PromptGenerator zaten çalışıyor.")
+        # Zaten çalışıyor: sessizce kapanmak yerine açık olan kopyanın penceresini göster
+        winapi.signal_running_instance()
+        log("ikinci başlatma: çalışan kopyaya pencereyi aç sinyali gönderildi")
         return
     shell = Shell()
     webview.start(shell.background, gui="edgechromium", debug="--debug" in sys.argv)

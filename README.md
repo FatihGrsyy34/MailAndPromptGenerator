@@ -20,7 +20,7 @@ Windows'ta her yerden **Ctrl+Space** ile açılır: seçenekleri seçip birkaç 
 - Gemini ücretsiz kademesinde model başına günlük istek kotası düşüktür (örn. 20); uygulama kotası dolan ya da yoğun olan modeli atlayıp `config.toml`'daki yedek modellere geçer. Yoğun kullanımda ücretli kademe önerilir.
 
 ## Kurulum
-Sanal ortam proje içinde: `.venv` (`python -m venv .venv`, sonra `.venv\Scripts\python.exe -m pip install -e .[dev] pywebview comtypes`). `pg.cmd` onu kullanır.
+Sanal ortam proje içinde: `.venv` (`python -m venv .venv`, sonra `.venv\Scripts\python.exe -m pip install -e .[dev]`). `pg.cmd` onu kullanır.
 
 ```bash
 pg setkey
