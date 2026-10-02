@@ -59,7 +59,7 @@ def test_mail_pipeline_rejects_proofread_rewrite(tmp_path):
     })
     cfg = _cfg(tmp_path)
     cfg.mail["always_proofread"] = True  # denetimi zorla: yeniden yazma reddedilmeli
-    res = MailPipeline(llm, cfg, StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
+    res = MailPipeline(llm, cfg, StyleStore(tmp_path)).run(MailRequest(context="Ahmet Bey'e demo saatini yaz", length="kisa"))
     assert res.body == CLEAN
     assert any(t.get("accepted") is False for t in res.trace)
 
@@ -197,7 +197,7 @@ def test_fix_text_levels(tmp_path):
                    "Proofread": [Proofread(subject="", body=fixed, changes=[])]})
     r = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).fix_text(src, level="iyilestir", tone="resmi", lang="tr")
     assert [c["schema"] for c in llm.calls] == ["Draft"]  # temiz çıktıda ayrı yazım denetimi çağrısı yok
-    assert 'tone to "Formal"' in llm.calls[0]["system"] and "<text>" in llm.calls[0]["user"]
+    assert 'chose the tone "Formal"' in llm.calls[0]["system"] and "<text>" in llm.calls[0]["user"]
 
 
 def test_fix_text_uses_recipient(tmp_path):
@@ -235,3 +235,27 @@ def test_name_signature_removed_and_standard_closing_kept(tmp_path):
     })
     res = MailPipeline(llm, _cfg(tmp_path), StyleStore(tmp_path)).run(MailRequest(context="x", length="kisa"))
     assert res.body.endswith("Teşekkürler, iyi çalışmalar dilerim.\nSaygılarımla,") and "Fatih" not in res.body
+
+
+def test_greeting_name_not_in_context_is_removed():
+    from engine.mail.pipeline import _guard_greeting_name
+
+    body = "Merhaba Ahmet Bey,\n\nPortal bilgilerini iletebilirsiniz.\n\nSaygılarımla,"
+    assert _guard_greeting_name(body, "Portal giriş bilgilerini iletebilirsiniz.").startswith("Merhaba,\n")
+    # bağlamda geçen isim (ekli hâli de) korunur
+    assert _guard_greeting_name(body, "Ahmet Bey'e portal bilgilerini sor") == body
+    # kalıp olarak kalmış yer tutucu da temizlenir
+    assert _guard_greeting_name("Sayın [Ad Soyad],\n\nMetin.", "metin").startswith("Merhaba,\n")
+    # isimsiz hitaplar ve hitapsız metinler olduğu gibi kalır
+    for ok in ("Merhabalar,\n\nMetin.", "İyi günler,\n\nMetin.", "Sayın Yetkili,\n\nMetin.", "Portal bilgilerini iletebilirsiniz."):
+        assert _guard_greeting_name(ok, "metin") == ok
+    assert _guard_greeting_name("Hi John,\n\nText.", "text", "en").startswith("Hello,\n")
+
+
+def test_stacked_closing_dropped_but_standard_closing_kept():
+    from engine.mail.pipeline import _drop_stacked_closing
+
+    assert _drop_stacked_closing("Metin.\n\nİyi çalışmalar,\n\nSaygılarımla,") == "Metin.\n\nİyi çalışmalar,"
+    standard = "Metin.\n\nTeşekkürler, iyi çalışmalar dilerim.\nSaygılarımla,"
+    assert _drop_stacked_closing(standard) == standard
+    assert _drop_stacked_closing("Metin.\n\nSaygılarımla,") == "Metin.\n\nSaygılarımla,"

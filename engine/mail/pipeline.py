@@ -80,6 +80,28 @@ def _closing_block(body: str) -> list[str]:
     return block
 
 
+def _drop_stacked_closing(body: str) -> str:
+    """Üst üste iki kapanış ("İyi çalışmalar," + "Saygılarımla,") varsa ilkini bırakır. Kullanıcının standart
+    kapanışı ("Teşekkürler, iyi çalışmalar dilerim." + "Saygılarımla,") tek kapanış sayılır: ilk satırı noktayla biter."""
+    lines = body.rstrip().split("\n")
+    tail: list[int] = []
+    for i in range(len(lines) - 1, -1, -1):
+        ln = lines[i].strip()
+        if not ln:
+            continue
+        if len(ln.split()) <= 7 and _CLOSING_HINT.search(ln):
+            tail.insert(0, i)
+        else:
+            break
+    commas = [i for i in tail if lines[i].strip().endswith(",")]
+    if len(commas) < 2:
+        return body
+    keep = lines[: commas[0] + 1]
+    while keep and not keep[-1].strip():
+        keep.pop()
+    return "\n".join(keep)
+
+
 def _keep_standard_closing(before: str, after: str) -> str:
     """Düzenleme adımı kullanıcının standart kapanışını silerse ya da değiştirirse eskisini geri koyar."""
     old, new = _closing_block(before), _closing_block(after)
@@ -89,6 +111,39 @@ def _keep_standard_closing(before: str, after: str) -> str:
     while lines and (not lines[-1].strip() or lines[-1].strip() in new):
         lines.pop()
     return "\n".join(lines).rstrip() + "\n\n" + "\n".join(old)
+
+
+_GREETING_WORDS = {
+    "merhaba", "merhabalar", "selam", "selamlar", "sayın", "değerli", "kıymetli", "bey", "hanım", "beyefendi",
+    "hanımefendi", "yetkili", "ilgili", "ekip", "ekibi", "arkadaşlar", "herkese", "hocam", "iyi", "günler",
+    "çalışmalar", "kolay", "gelsin", "tekrar", "dear", "hi", "hello", "team", "all", "everyone", "mr", "ms", "mrs",
+    "sir", "madam", "good", "morning", "afternoon", "there", "ve",
+}
+
+
+def _guard_greeting_name(body: str, sources: str, lang: str = "tr") -> str:
+    """Model hitaba metinde hiç geçmeyen bir isim (ya da "[Ad] Bey" gibi bir kalıp) koyduysa hitabı isimsiz yapar.
+    Örnek: bağlamda isim yokken "Merhaba Ahmet Bey," → "Merhaba,". Bağlamda geçen isimlere dokunmaz."""
+    import re
+
+    lines = body.split("\n")
+    idx = next((i for i, ln in enumerate(lines) if ln.strip()), None)
+    if idx is None:
+        return body
+    first = lines[idx].strip()
+    if not re.search(r"[,!]$|kolay gelsin\.$", first, re.I) or len(first.split()) > 6:
+        return body  # ilk satır hitap değil, doğrudan konuya girilmiş
+
+    def low(t: str) -> str:  # Türkçe küçük harf: "İ" → "i", "I" → "ı"
+        return t.replace("İ", "i").replace("I", "ı").lower()
+
+    src = {w[:4] for w in re.findall(r"\w+", low(sources)) if len(w) >= 2}
+    words = re.findall(r"\w+", low(first))
+    invented = "[" in first or any(w not in _GREETING_WORDS and w[:4] not in src for w in words)
+    if not invented:
+        return body
+    lines[idx] = "Hello," if lang == "en" else "Merhaba,"
+    return "\n".join(lines)
 
 
 def _strip_name_signature(body: str, user: dict) -> str:
@@ -336,12 +391,15 @@ class MailPipeline:
         if level != "yazim":
             self.on_step("Metin iyileştiriliyor")
             t = time.perf_counter()
-            tone_data = self.data["tones"].get(tone) if tone else None
+            # "Normal" = kullanıcının kendi üslubu: ton kartı yerine stil profili ve kendi selam/kapanışı geçerli
+            tone_data = self.data["tones"].get(tone) if tone and tone != "normal" else None
             rec = self.data["recipients"].get(recipient) if recipient else None
             system = render(
                 load_prompt("mail_fix"), sender=self._sender(), language_name=LANG_NAMES[lang],
                 lang_tr=lang == "tr", tone_label=tone_data["label_en"] if tone_data else "",
                 tone_card=tone_data["card"].strip() if tone_data else "", no_tone_card=not tone_data,
+                greetings=" / ".join(tone_data[f"greeting_{lang}"]) if tone_data else "",
+                closings=" / ".join(tone_data[f"closings_{lang}"]) if tone_data else "",
                 banned=banned_phrase_list(lang, limit=40), style_profile=self.style.profile_text(),
                 recipient_label=rec["label_en"] if rec else "", recipient_card=rec["card"].strip() if rec else "",
             )
@@ -359,7 +417,10 @@ class MailPipeline:
             fixed = _fix_day_case(fixed)
         if (self.config.user.get("name") or "~") not in text:
             fixed = _strip_name_signature(fixed, self.config.user)
-        fixed = _keep_standard_closing(text, fixed)
+        if not tone or tone == "normal" or level == "yazim":
+            fixed = _keep_standard_closing(text, fixed)  # ton seçildiyse kapanış da o tona göre değişebilir
+        fixed = _drop_stacked_closing(fixed)
+        fixed = _guard_greeting_name(fixed, " ".join((text, note)), lang)
         if level == "yazim":
             changes = [c for s in trace if s.get("step") == "proofread" and s.get("accepted") for c in s.get("changes", [])]
             notes = f"{len(changes)} yazım/noktalama düzeltmesi" if changes else "Yazım ve noktalama hatası bulunamadı"
@@ -397,6 +458,7 @@ class MailPipeline:
         new_body = _format_cleanup(new_body)
         if lang == "tr":
             new_body = _fix_day_case(new_body)
+        new_body = _guard_greeting_name(new_body, " ".join((body, note)), lang)
         final = [i for i in self._checks(new_subject, new_body, lang) if "madde" not in i.message]
         return MailResult(subject=new_subject, body=new_body, notes=d.notes, warnings=final, trace=trace)
 
@@ -435,8 +497,11 @@ class MailPipeline:
             draft_body = _strip_name_signature(draft_body, self.config.user)
             body = _strip_name_signature(body, self.config.user)
         body = _keep_standard_closing(draft_body, body)
+        body = _drop_stacked_closing(body)
         if req.lang == "tr":
             body = _fix_day_case(body)
+        prev = req.previous.body if req.previous else ""
+        body = _guard_greeting_name(body, " ".join((req.context, req.thread, prev)), req.lang)
         final = self._checks(subject, body, req.lang) + self._length_issue(body, req)
         trace.append({"step": "checks:final", "issues": [i.as_hint() for i in final]})
         return MailResult(

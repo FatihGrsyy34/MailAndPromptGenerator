@@ -13,7 +13,7 @@ tones:
       not from piling up courtesy phrases. State the matter and the request plainly in the opening paragraph.
       In Turkish use "siz" throughout, prefer "rica ederim / arz ederim" over casual verbs, but do not stack
       "-mektedir" endings; write clean, modern formal Turkish.
-    greeting_tr: ["Sayın Ad Soyad,", "Değerli Ad Bey/Hanım,", "Sayın Yetkili,"]
+    greeting_tr: ["Sayın [Ad Soyad],", "Değerli [Ad] Bey/Hanım,", "Sayın Yetkili,"]
     greeting_en: ["Dear Mr./Ms. Surname,", "Dear First name,"]
     closings_tr: ["Saygılarımla,", "Bilgilerinize sunarım. Saygılarımla,"]
     closings_en: ["Kind regards,", "Best regards,"]
@@ -25,7 +25,7 @@ tones:
       Everyday professional office tone, like a competent colleague writing to someone they work with regularly.
       Friendly enough, but the email is about the work. Short paragraphs, clear request, no small talk unless the
       context gives a real reason for it.
-    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,", "Merhaba,"]
+    greeting_tr: ["Merhaba [Ad] Bey/Hanım,", "Merhaba [Ad],", "Merhaba,"]
     greeting_en: ["Hi First name,", "Hello First name,"]
     closings_tr: ["İyi çalışmalar,", "Teşekkürler, iyi çalışmalar,", "Teşekkürler,"]
     closings_en: ["Best,", "Thanks,", "Best regards,"]
@@ -37,7 +37,7 @@ tones:
       Courteous and considerate: you are asking for something or giving news the reader may not love. Soften requests
       with "rica etsem / mümkünse / could you", acknowledge the reader's time once, and thank them once. Never grovel,
       never apologise more than once, never add compliments that are not grounded in the context.
-    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Sayın Ad Soyad,"]
+    greeting_tr: ["Merhaba [Ad] Bey/Hanım,", "Sayın [Ad Soyad],", "Merhaba,"]
     greeting_en: ["Dear First name,", "Hi First name,"]
     closings_tr: ["Şimdiden teşekkür ederim, iyi çalışmalar,", "Teşekkür ederim, saygılarımla,", "İyi çalışmalar dilerim,"]
     closings_en: ["Thank you in advance,", "Many thanks,", "Kind regards,"]
@@ -50,7 +50,7 @@ tones:
       in English, a light touch of warmth ("Kolay gelsin", "Hope your week's going well" only if it fits). Still clean
       spelling and punctuation, still gets to the point quickly. In Turkish, keep "siz" unless the context clearly
       shows you use "sen" with this person.
-    greeting_tr: ["Merhaba Ad,", "Selam Ad,", "Ad merhaba, kolay gelsin."]
+    greeting_tr: ["Merhaba [Ad],", "Selam [Ad],", "[Ad] merhaba, kolay gelsin.", "Merhaba,"]
     greeting_en: ["Hi First name,", "Hey First name,"]
     closings_tr: ["Teşekkürler,", "Görüşmek üzere,", "Sevgiler,", "Kolay gelsin,"]
     closings_en: ["Thanks!", "Cheers,", "Talk soon,"]
@@ -62,7 +62,7 @@ tones:
       Warm and genuinely human: the reader should feel a person thought about them before writing. One sentence that
       shows real empathy or appreciation tied to something specific in the context (not a generic "hope you're well").
       Plain, sincere words; no dramatic adjectives, no motivational-poster language. Then the practical content.
-    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,"]
+    greeting_tr: ["Merhaba [Ad] Bey/Hanım,", "Merhaba [Ad],", "Merhaba,"]
     greeting_en: ["Hi First name,", "Dear First name,"]
     closings_tr: ["Sağlıcakla kalın,", "Teşekkürler, iyi çalışmalar,", "Sevgiler,"]
     closings_en: ["Warmly,", "All the best,", "Take care,"]
@@ -74,7 +74,7 @@ tones:
       Direct and firm, for follow-ups, escalations, deadlines or pushing back. The request or decision goes in the first
       sentence. Give a concrete date or next step. No apologies, no hedging words (just, maybe, perhaps, belki, acaba),
       no softening chains. Stay polite and factual; firmness comes from clarity, not from harsh words.
-    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,"]
+    greeting_tr: ["Merhaba [Ad] Bey/Hanım,", "Merhaba [Ad],", "Merhaba,"]
     greeting_en: ["Hi First name,", "Dear First name,"]
     closings_tr: ["İyi çalışmalar,", "Saygılarımla,"]
     closings_en: ["Best regards,", "Regards,"]
@@ -86,7 +86,7 @@ tones:
       A sincere apology for a mistake, delay or problem. Apologise once, early, and name the specific issue. Take
       responsibility without over-explaining or blaming others. Then say concretely what has been done or will be done
       and by when. No repeated "sorry", no "any inconvenience this may have caused" boilerplate.
-    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Sayın Ad Soyad,"]
+    greeting_tr: ["Merhaba [Ad] Bey/Hanım,", "Sayın [Ad Soyad],", "Merhaba,"]
     greeting_en: ["Dear First name,", "Hi First name,"]
     closings_tr: ["Anlayışınız için teşekkür ederim, saygılarımla,", "İyi çalışmalar,"]
     closings_en: ["Thanks for your understanding,", "Kind regards,"]
@@ -97,7 +97,7 @@ tones:
     card: |
       A thank-you note. Thank the person for one specific thing and say what difference it made, using details from
       the context. Keep it short. No generic praise ("amazing job", "harika iş") without the specific reason behind it.
-    greeting_tr: ["Merhaba Ad Bey/Hanım,", "Merhaba Ad,"]
+    greeting_tr: ["Merhaba [Ad] Bey/Hanım,", "Merhaba [Ad],", "Merhaba,"]
     greeting_en: ["Hi First name,", "Dear First name,"]
     closings_tr: ["Tekrar teşekkürler, iyi çalışmalar,", "Sevgiler,", "Saygılarımla,"]
     closings_en: ["Thanks again,", "With thanks,", "Best,"]
